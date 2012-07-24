@@ -24,4 +24,6 @@ redParse (Right f :rest) = case redParse rest of
 
 main = do txt <- TextIO.readFile "K18_alone_shifty.csv"
           let Right result = parseCSV txt
+          putStr "Header:"
+          print . head $ result
           print $ redParse $ map convEntry $ tail result
