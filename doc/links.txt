@@ -1,3 +1,11 @@
 Preditor paper:
 http://nar.oxfordjournals.org/content/34/suppl_2/W63.abstract
 Preditor.pdf
+
+Preditor help page:
+http://wishart.biology.ualberta.ca/shiftor/help/function.html
+
+SEQSEE (SeqSim) paper:
+http://bioinformatics.oxfordjournals.org/content/10/2/121.abstract?ijkey=41c6ef585df691c7b56b6cd6e7a18975aefa02ac&keytype2=tf_ipsecsha
+
+
