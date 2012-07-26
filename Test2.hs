@@ -1,5 +1,7 @@
 module Main(main) where
 
+import System.Environment(getArgs)
+import Control.Monad(forM_)
 import Text.ParseCSV(parseCSV)
 import Data.Text(Text)
 import qualified Data.Text.IO as TextIO
@@ -22,8 +24,17 @@ redParse (Right f :rest) = case redParse rest of
     Right prest -> Right $ f:prest
     Left  msg   -> Left msg
 
-main = do txt <- TextIO.readFile "K18_alone_shifty.csv"
-          let Right result = parseCSV txt
-          putStr "Header:"
-          print . head $ result
-          print $ redParse $ map convEntry $ tail result
+processFile fname = do txt <- TextIO.readFile fname -- "K18_alone_shifty.csv"
+                       let Right result = parseCSV txt
+                       putStr "Header:"
+                       let headers = head result
+                       let arrP = redParse $ map convEntry $ tail result
+                       print headers
+                       print arrP
+                       case arrP of
+                         Left  msg -> return ()
+                         Right arr -> print $ map (\(_a, _b, vals) -> length vals) arr
+
+main = getArgs >>=
+       (flip forM_) processFile
+
