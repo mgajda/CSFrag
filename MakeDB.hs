@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveDataTypeable, FlexibleInstances, TemplateHaskell, CPP #-}
-module MakeDB where
+{-# LANGUAGE DeriveDataTypeable, FlexibleInstances, TemplateHaskell, CPP, NoMonomorphismRestriction #-}
+module Main(main) where
 
 import System.FilePath
 import System.Environment(getArgs)
@@ -29,28 +29,49 @@ data Database = Database { resArray   :: Array U DIM1 Char   -- (nRes + nStruct)
 $(derive makeBinary ''Database)
 
 
--- | Here is code for parallellism
+--   Here is code for parallellism
+-- | Sets up as many capabilities as we have processors.
 #ifdef __GLASGOW_HASKELL__
 setupParallel = GHC.Conc.getNumProcessors >>= GHC.Conc.setNumCapabilities
 #else
 setupParallel = return ()
 #endif
 
+-- | Finalization of parallel pool.
 stopParallel = stopGlobalPool
 
+-- | Wraps parallel-io computation with setupParallel and stopParallel.
+--   NOTE: Not yet exception-proof.
 withParallel act = do setupParallel
                       r <- act
                       stopParallel
                       return r
 
+-- | Parse .str files and generate arrays in parallel,
+--   then merge results into a single database.
 makeDB :: [FilePath] -> IO Database
 makeDB fnames = (parallel $ Prelude.map processFile fnames) >>= mergeResults
 
 -- | Reads a single database
-processFile fname = undefined -- TODO: implement reading
+processFile fname = do putStrLn fname -- TODO: implement reading
+                       return nullDb
 
+-- | Empty array of rank 1
+emptyArrayDim1 = fromListUnboxed (ix1 0  ) []
+
+-- | Empty array of rank 2
+emptyArrayDim2 = fromListUnboxed (ix2 0 0) []
+
+-- | Empty database.
+nullDb :: Database
+nullDb = Database emptyArrayDim1 emptyArrayDim2 emptyArrayDim2 []
+
+-- | Merge multiple databases into one.
 mergeResults (r:rs) = return r -- TODO: proper merging!
+mergeResuls  _      = return nullDb
 
+-- | Get arguments, and run makeDB on them, and write
+--   resulting database into a single file.
 main = do args <- getArgs
           let dbfname     = last    args
           let inputfnames = butlast args
@@ -60,3 +81,4 @@ main = do args <- getArgs
     butlast [b]    = []
     butlast []     = []
     butlast (b:bs) = b:butlast bs
+
