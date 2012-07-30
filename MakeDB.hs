@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances, CPP #-}
 module Main(main) where
 
+import System.IO(stderr, hPutStrLn)
 import System.FilePath
 import System.Environment(getArgs)
 import Data.Binary
@@ -9,6 +10,7 @@ import Control.Concurrent.ParallelIO
 import GHC.Conc
 #endif
 
+import Data.STAR
 import Data.STAR.Coords
 import Data.Array.Repa
 import Database
@@ -38,7 +40,15 @@ makeDB fnames = (parallel $ Prelude.map processFile fnames) >>= mergeResults
 
 -- | Reads a single database
 processFile fname = do putStrLn fname -- TODO: implement reading
-                       return nullDb
+                       parsed <- parseSTARFile fname
+                       case parsed of
+                         Left errmsg ->do hPutStrLn stderr errmsg
+                                          return nullDb
+                         Right star  ->do let chemShifts = extractChemShifts star
+                                          let coords     = extractCoords     star
+                                          --chemShifts `par` coords `par` ...
+                                          print chemShifts
+                                          return nullDb
 
 -- | Merge multiple databases into one.
 mergeResults (r:rs) = return r -- TODO: proper merging!
