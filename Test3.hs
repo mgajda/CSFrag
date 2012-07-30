@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Main(main) where
+{-# LANGUAGE OverloadedStrings, FlexibleInstances #-}
+module Main where --(main) where
 
 import System.Environment(getArgs)
 import Control.Monad(forM_)
@@ -10,6 +10,9 @@ import qualified Data.Attoparsec.Text as Atto
 import qualified Data.Array.Repa      as Repa
 import Data.Array.Repa((:.)(..), Z(..), DIM2)
 import Control.Exception(assert)
+import Data.Binary
+import RepaBin
+--import Data.Vector.Unboxed.Base(Unbox(..))
 
 convEntry :: [Text] -> Either String (Text, [Int])
 convEntry (rescode:others) =
@@ -60,6 +63,16 @@ processFile fname = do txt <- TextIO.readFile fname
                          Right arr -> do print $ map (\(_a, vals) -> length vals) arr
                                          m <- Repa.computeUnboxedP $ mkMatrix headers arr
                                          print m
+
+{- 
+instance (Repa.Shape sh, Data.Vector.Unboxed.Base.Unbox a, Binary sh,
+      Binary a) => Binary (Repa.Array Repa.U sh a) where
+  put arr = do put $  Repa.extent arr
+               put $  Repa.toList arr
+  get     = do sh  <- get
+               l   <- get
+               return $ Repa.fromListUnboxed sh l
+ -}
 
 main = getArgs >>=
        (flip forM_) processFile
