@@ -18,11 +18,11 @@ import Codec.Compression.GZip(compress, decompress)
 
 -- | Database works as an array of residues in the sequence order, splitted by '*' structure separators,
 --   along with coordinates, and chemical shifts
-data Database = Database { resArray   :: Array U DIM1 Char   -- (nRes + nStruct)
-                         , csArray    :: Array U DIM2 Double -- (nRes + nStruct) x nShifts
-                         , shiftNames :: Array U DIM2 Char   -- nShifts x 2 (max length of chemical shift code)
-                         , crdArray   :: [[Coord]]           -- (nRes + nStruct) -> pointers to all coordinates
-                                                             -- in each residue (first model only.)
+data Database = Database { resArray   :: Array U DIM1 Char  -- (nRes + nStruct)
+                         , csArray    :: Array U DIM2 Float -- (nRes + nStruct) x nShifts
+                         , shiftNames :: Array U DIM2 Char  -- nShifts x 2 (max length of chemical shift code)
+                         , crdArray   :: [[Coord]]          -- (nRes + nStruct) -> pointers to all coordinates
+                                                            -- in each residue (first model only.)
                          }
   deriving (Typeable, Show, Eq)
 
