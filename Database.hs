@@ -1,5 +1,8 @@
 {-# LANGUAGE DeriveDataTypeable, FlexibleInstances, TemplateHaskell, NoMonomorphismRestriction #-}
-module Database(Database(..), nullDb) where
+module Database(Database(..), nullDb
+               ,encodeCompressedFile
+               ,decodeCompressedFile
+               ) where
 
 import Data.Binary
 import Data.Typeable
@@ -9,6 +12,9 @@ import Data.DeriveTH
 import Data.STAR.Coords
 import Data.Array.Repa
 import Data.Array.Repa.RepaBinary
+
+import Data.ByteString.Lazy as BS
+import Codec.Compression.GZip(compress, decompress)
 
 -- | Database works as an array of residues in the sequence order, splitted by '*' structure separators,
 --   along with coordinates, and chemical shifts
@@ -32,3 +38,8 @@ emptyArrayDim2 = fromListUnboxed (ix2 0 0) []
 nullDb :: Database
 nullDb = Database emptyArrayDim1 emptyArrayDim2 emptyArrayDim2 []
 
+-- | Decode and decompress database file.
+decodeCompressedFile f = return . decode . decompress =<< BS.readFile f
+
+-- | Encode and compress database file.
+encodeCompressedFile f = BS.writeFile f . compress . encode
