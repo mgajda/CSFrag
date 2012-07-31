@@ -19,7 +19,9 @@ stdAaTLC = listArray (0, Prelude.length tlcList) tlcList
                   , "MET", "ASN", "PRO", "GLN", "ARG"
                   , "SER", "THR", "VAL", "TRP", "TYR" ]
 
+allPDBAminoacids   :: [BSC.ByteString]
 allPDBAminoacids   = Data.Array.elems stdAaTLC
+allFASTAAminoacids :: [Char]
 allFASTAAminoacids = BSC.unpack stdAaSLC
 
 -- | FASTA codes for standard aminoacids
@@ -28,13 +30,14 @@ stdAaSLC = BSC.pack "ACDEFGHIKLMNPQRSTVWY"
 
 -- | Finds a three-letter PDB/BMRB aminoacid code for a given single-letter FASTA code
 --   (or returns "UNK" for unknown.)
-
+toThreeLetterCode :: Char -> ByteString
 toThreeLetterCode c = case BSC.elemIndex c stdAaSLC of
                         Just p  -> stdAaTLC ! p
                         Nothing -> "UNK"
 
 -- | Finds a single-letter FASTA code for a given three-letter PDB code (or returns 'X'.)
-toSingleLetterCode c = Data.Map.findWithDefault 'X' tlcMap c
+toSingleLetterCode :: ByteString -> Char
+toSingleLetterCode c = Data.Map.findWithDefault 'X' c tlcMap
 
 tlcMap = Data.Map.fromList $ Data.List.zipWith (,) (Data.Array.elems stdAaTLC) (BSC.unpack stdAaSLC)
 

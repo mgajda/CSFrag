@@ -14,5 +14,5 @@ executable  MakeDB
   default-language:    Haskell2010
   main-is:             MakeDB.hs
   other-modules:       Database Data.Array.Repa.RepaBinary
-  ghc-options:         -threaded
+  ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   build-depends:       base, binary, derive, parsestar, repa, parallel-io, filepath, vector, containers

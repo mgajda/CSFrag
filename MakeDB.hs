@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, CPP #-}
+{-# LANGUAGE FlexibleInstances, CPP, BangPatterns #-}
 module Main(main, dbFromFile, mergeResults) where
 
 import Prelude hiding(String)
@@ -8,8 +8,8 @@ import System.FilePath
 import System.Environment(getArgs, getProgName)
 import Control.Monad(when)
 import Data.Binary
-import Data.List(intercalate, foldl')
-import Data.Map as Map
+import Data.List(intercalate, foldl', map)
+import Data.Map as Map hiding (map)
 import Control.Concurrent.ParallelIO
 #ifdef __GLASGOW_HASKELL__
 import GHC.Conc
@@ -21,7 +21,9 @@ import Data.STAR
 import Data.STAR.Coords
 import Data.STAR.ChemShifts
 import Data.STAR.Type(String(..))
+
 import Database
+import ResidueCodes
 
 --   Here is code for parallellism
 -- | Sets up as many capabilities as we have processors.
@@ -47,8 +49,8 @@ makeDB :: [FilePath] -> IO Database
 makeDB fnames = parallel (Prelude.map dbFromFile fnames) >>= mergeResults
 
 -- | Key for sorting dictionary
-data ResId = ResId { resnum  :: Int
-                   , rescode :: String
+data ResId = ResId { resnum  :: !Int
+                   , rescode :: !String
                    }
   deriving (Eq, Ord, Show, Read)
 
@@ -75,9 +77,9 @@ coordFilter :: Coord -> Bool
 coordFilter (Coord { model_id = mid })  = mid == 1
 
 -- | Transient sorting structure is a @Data.Map.Map@ of SortingEntry items.
-data SortingEntry = SE { key        :: ResId,
-                         chemShifts :: [ChemShift],
-                         coords     :: [Coord]
+data SortingEntry = SE { se_key     :: !ResId,
+                         chemShifts :: ![ChemShift],
+                         coords     :: ![Coord]
                        }
   deriving (Eq, Show)
 
@@ -97,13 +99,13 @@ coordAdd se coord = se { coords     = coord:coords     se }
 -- | Given a filter, projection to key, and adding function
 --   adds an object to a sorting structure, when filter is true.
 addToSMap aFilter finder adder smap entry = if aFilter entry
-                                              then smap'
+                                              then k `seq` smap'
                                               else smap
   where
     k     = finder entry
     se    = Map.findWithDefault (emptySE k) k smap
     se'   = adder se entry
-    smap' = Map.insert k se' smap
+    smap' = se' `seq` Map.insert k se' smap
 
 -- | Adds chemical shift record to a sorting map.
 addCSToSMap    = addToSMap csFilter    csKey    csAdd
@@ -129,12 +131,20 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                          print $ head chemShifts
                                          print $ head coords
                                          let smap = makeSMap chemShifts coords
+                                         let ssmap = sortSMap smap
                                          print $ head $ toList smap
+                                         print $ fastaSequence ssmap 
                                          return nullDb
   where
     printMsg aList = putStrLn $ intercalate " " aList
     makeSMap chemShifts coords = let smapCoords = Data.List.foldl' addCoordToSMap emptySMap  coords
                                  in               Data.List.foldl' addCSToSMap    smapCoords chemShifts
+
+sortSMap = map snd . toAscList . mapKeys resnum
+
+-- | Takes an ordered, sorted per-residue groups of SortingEntry, and returns FASTA sequence.
+--   NOTE: does not yet handle gaps!
+fastaSequence = Data.List.map (toSingleLetterCode . rescode . se_key)
 
 -- | Merge multiple databases into one.
 mergeResults (r:rs) = return r -- TODO: proper merging!
