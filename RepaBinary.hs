@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, RankNTypes, UndecidableInstances, OverlappingInstances #-}
-module RepaBin() where
+module RepaBinary() where
 
 import qualified Data.Array.Repa      as Repa
 import Data.Array.Repa((:.)(..), Z(..), DIM2)

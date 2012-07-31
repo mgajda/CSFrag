@@ -8,7 +8,7 @@ import Data.DeriveTH
 
 import Data.STAR.Coords
 import Data.Array.Repa
-import RepaBin
+import RepaBinary
 
 -- | Database works as an array of residues in the sequence order, splitted by '*' structure separators,
 --   along with coordinates, and chemical shifts

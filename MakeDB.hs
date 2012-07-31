@@ -38,7 +38,7 @@ withParallel act = do setupParallel
 -- | Parse .str files and generate arrays in parallel,
 --   then merge results into a single database.
 makeDB :: [FilePath] -> IO Database
-makeDB fnames = (parallel $ Prelude.map processFile fnames) >>= mergeResults
+makeDB fnames = parallel (Prelude.map processFile fnames) >>= mergeResults
 
 -- | Reads a single database
 processFile fname = do putStrLn fname -- TODO: implement reading
