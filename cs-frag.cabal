@@ -1,0 +1,18 @@
+name:                CSFrag
+version:             0.1
+synopsis:            Chemical shift-based fragment finding.
+description:         Creates CS-indexed database, and uses Preditor criterion to find best fragments. 
+category:            Data
+license:             BSD3
+--license-file:        LICENSE
+author:              Michal J. Gajda
+maintainer:          mgajda@gwdg.de
+build-type:          Simple
+cabal-version:       >=1.12
+
+executable  MakeDB
+  default-language:    Haskell2010
+  main-is:             MakeDB.hs
+  other-modules:     Database RepaBin Utils
+  ghc-options:         -threaded
+  build-depends:       base, binary, derive, parsestar, repa, parallel-io, filepath, vector

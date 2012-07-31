@@ -2,8 +2,10 @@
 module Main(main) where
 
 import System.IO(stderr, hPutStrLn)
+import System.Exit
 import System.FilePath
-import System.Environment(getArgs)
+import System.Environment(getArgs, getProgName)
+import Control.Monad(when)
 import Data.Binary
 import Control.Concurrent.ParallelIO
 #ifdef __GLASGOW_HASKELL__
@@ -12,7 +14,7 @@ import GHC.Conc
 
 import Data.STAR
 import Data.STAR.Coords
-import Data.Array.Repa
+import qualified Data.Array.Repa as Repa
 import Database
 
 --   Here is code for parallellism
@@ -54,9 +56,15 @@ processFile fname = do putStrLn fname -- TODO: implement reading
 mergeResults (r:rs) = return r -- TODO: proper merging!
 mergeResuls  _      = return nullDb
 
+-- | Print usage on the command line
+usage = do prog <- getProgName
+           hPutStrLn stderr $ "Usage: " ++ prog ++ " <input1.str> ... <output.db>"
+
 -- | Get arguments, and run makeDB on them, and write
 --   resulting database into a single file.
 main = do args <- getArgs
+          when (length args < 2) $ do usage
+                                      exitFailure
           let dbfname     = last    args
           let inputfnames = butlast args
           db <- withParallel $ makeDB inputfnames
