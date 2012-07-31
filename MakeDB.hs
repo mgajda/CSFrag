@@ -7,6 +7,7 @@ import System.FilePath
 import System.Environment(getArgs, getProgName)
 import Control.Monad(when)
 import Data.Binary
+import Data.List(intercalate)
 import Control.Concurrent.ParallelIO
 #ifdef __GLASGOW_HASKELL__
 import GHC.Conc
@@ -49,8 +50,15 @@ processFile fname = do putStrLn fname -- TODO: implement reading
                          Right star  ->do let chemShifts = extractChemShifts star
                                           let coords     = extractCoords     star
                                           --chemShifts `par` coords `par` ...
-                                          print chemShifts
+                                          printMsg [show (length chemShifts)
+                                                   ,"chemical shifts from"
+                                                   ,fname ++ "."]
+                                          printMsg [show (length chemShifts)
+                                                   ,"atomic coordinates from"
+                                                   ,fname ++ "."]
                                           return nullDb
+  where
+    printMsg aList = putStrLn $ intercalate " " aList
 
 -- | Merge multiple databases into one.
 mergeResults (r:rs) = return r -- TODO: proper merging!
