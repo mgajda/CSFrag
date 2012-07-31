@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, CPP #-}
-module Main(main) where
+module Main(main, dbFromFile, mergeResults) where
 
 import Prelude hiding(String)
 import System.IO(stderr, hPutStrLn)
@@ -44,7 +44,7 @@ withParallel act = do setupParallel
 -- | Parse .str files and generate arrays in parallel,
 --   then merge results into a single database.
 makeDB :: [FilePath] -> IO Database
-makeDB fnames = parallel (Prelude.map processFile fnames) >>= mergeResults
+makeDB fnames = parallel (Prelude.map dbFromFile fnames) >>= mergeResults
 
 -- | Key for sorting dictionary
 data ResId = ResId { resnum  :: Int
@@ -84,6 +84,7 @@ data SortingEntry = SE { key        :: ResId,
 -- | Empty @SortingEntry@
 emptySE k = SE k [] []
 
+-- | Empty transient sorting structure.
 emptySMap :: Map.Map ResId SortingEntry
 emptySMap = Map.empty
 
@@ -93,7 +94,8 @@ csAdd    se cs    = se { chemShifts = cs   :chemShifts se }
 -- | Adds Coord to @SortingEntry@
 coordAdd se coord = se { coords     = coord:coords     se }
 
--- | Given projection to key, and adding function adds an object to a sorting structure.
+-- | Given a filter, projection to key, and adding function
+--   adds an object to a sorting structure, when filter is true.
 addToSMap aFilter finder adder smap entry = if aFilter entry
                                               then smap'
                                               else smap
@@ -103,30 +105,32 @@ addToSMap aFilter finder adder smap entry = if aFilter entry
     se'   = adder se entry
     smap' = Map.insert k se' smap
 
+-- | Adds chemical shift record to a sorting map.
 addCSToSMap    = addToSMap csFilter    csKey    csAdd
 
+-- | Adds coordinate record to a sorting map, if it passes a filter.
 addCoordToSMap = addToSMap coordFilter coordKey coordAdd
 
 -- | Reads a single database
-processFile fname = do putStrLn fname -- TODO: implement reading
-                       parsed <- parseSTARFile fname
-                       case parsed of
-                         Left errmsg ->do hPutStrLn stderr errmsg
-                                          return nullDb
-                         Right star  ->do let chemShifts = extractChemShifts star
-                                          let coords     = extractCoords     star
-                                          --chemShifts `par` coords `par` ...
-                                          printMsg [show (length chemShifts)
-                                                   ,"chemical shifts from"
-                                                   ,fname ++ "."]
-                                          printMsg [show (length coords)
-                                                   ,"atomic coordinates from"
-                                                   ,fname ++ "."]
-                                          print $ head chemShifts
-                                          print $ head coords
-                                          let smap = makeSMap chemShifts coords
-                                          print $ head $ toList smap
-                                          return nullDb
+dbFromFile fname = do putStrLn fname -- TODO: implement reading
+                      parsed <- parseSTARFile fname
+                      case parsed of
+                        Left errmsg ->do hPutStrLn stderr errmsg
+                                         return nullDb
+                        Right star  ->do let chemShifts = extractChemShifts star
+                                         let coords     = extractCoords     star
+                                         --chemShifts `par` coords `par` ...
+                                         printMsg [show (length chemShifts)
+                                                  ,"chemical shifts from"
+                                                  ,fname ++ "."]
+                                         printMsg [show (length coords)
+                                                  ,"atomic coordinates from"
+                                                  ,fname ++ "."]
+                                         print $ head chemShifts
+                                         print $ head coords
+                                         let smap = makeSMap chemShifts coords
+                                         print $ head $ toList smap
+                                         return nullDb
   where
     printMsg aList = putStrLn $ intercalate " " aList
     makeSMap chemShifts coords = let smapCoords = Data.List.foldl' addCoordToSMap emptySMap  coords
