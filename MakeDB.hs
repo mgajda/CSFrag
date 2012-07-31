@@ -66,6 +66,14 @@ coordKey (Coord { res_id  = num
                            , rescode = code
                            }
 
+-- | Filters chemical shift records - take all.
+csFilter :: ChemShift -> Bool
+csFilter    _                           = True
+
+-- | Filters coordinate records - only those from first model.
+coordFilter :: Coord -> Bool
+coordFilter (Coord { model_id = mid })  = mid == 1
+
 -- | Transient sorting structure is a @Data.Map.Map@ of SortingEntry items.
 data SortingEntry = SE { key        :: ResId,
                          chemShifts :: [ChemShift],
@@ -86,16 +94,18 @@ csAdd    se cs    = se { chemShifts = cs   :chemShifts se }
 coordAdd se coord = se { coords     = coord:coords     se }
 
 -- | Given projection to key, and adding function adds an object to a sorting structure.
-addToSMap finder adder smap entry = smap'
+addToSMap aFilter finder adder smap entry = if aFilter entry
+                                              then smap'
+                                              else smap
   where
     k     = finder entry
     se    = Map.findWithDefault (emptySE k) k smap
     se'   = adder se entry
     smap' = Map.insert k se' smap
 
-addCSToSMap    = addToSMap csKey    csAdd
+addCSToSMap    = addToSMap csFilter    csKey    csAdd
 
-addCoordToSMap = addToSMap coordKey coordAdd
+addCoordToSMap = addToSMap coordFilter coordKey coordAdd
 
 -- | Reads a single database
 processFile fname = do putStrLn fname -- TODO: implement reading
