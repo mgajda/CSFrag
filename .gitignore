@@ -2,9 +2,10 @@
 *.o
 *.p_hi
 *.p_o
+*.prof
 Test
 Test2
 Test3
 MakeDB
 output.db
-*.prof
+dist/
