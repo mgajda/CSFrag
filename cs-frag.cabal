@@ -15,4 +15,4 @@ executable  MakeDB
   main-is:             MakeDB.hs
   other-modules:       Database Data.Array.Repa.RepaBinary
   ghc-options:         -threaded
-  build-depends:       base, binary, derive, parsestar, repa, parallel-io, filepath, vector
+  build-depends:       base, binary, derive, parsestar, repa, parallel-io, filepath, vector, containers
