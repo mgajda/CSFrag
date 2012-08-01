@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, CPP, BangPatterns, OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances, BangPatterns, OverloadedStrings, ScopedTypeVariables #-}
 module Main(main, dbFromFile, mergeResults) where
 
 import Prelude hiding(String)
@@ -11,9 +11,6 @@ import Data.Binary
 import Data.List(intercalate, foldl', map)
 import Data.Map as Map hiding (map)
 import Control.Concurrent.ParallelIO
-#ifdef __GLASGOW_HASKELL__
-import GHC.Conc
-#endif
 import qualified Data.Array.Repa as Repa
 import Data.Array.Repa.RepaBinary()
 
@@ -24,27 +21,13 @@ import Data.STAR.Type(String(..))
 
 import Database
 import ResidueCodes
-
---   Here is code for parallellism
--- | Sets up as many capabilities as we have processors.
-#ifdef __GLASGOW_HASKELL__
-setupParallel = GHC.Conc.getNumProcessors >>= GHC.Conc.setNumCapabilities
-#else
-setupParallel = return ()
-#endif
-
--- | Finalization of parallel pool.
-stopParallel = stopGlobalPool
-
--- | Wraps parallel-io computation with setupParallel and stopParallel.
---   NOTE: Not yet exception-proof.
-withParallel act = do setupParallel
-                      r <- act
-                      stopParallel
-                      return r
+import Util(withParallel)
 
 -- | Parse .str files and generate arrays in parallel,
 --   then merge results into a single database.
+--   NOTE: mergeResults should probably be parallel too?
+--         Then we should use some kind of parallel queue for reduction?
+--   NOTE: this seems like typical "map-reduce" application, except that reduce is mostly trivial.
 makeDB :: [FilePath] -> IO Database
 makeDB fnames = parallel (Prelude.map dbFromFile fnames) >>= mergeResults
 
@@ -82,6 +65,8 @@ data SortingEntry = SE { se_key     :: !ResId,
                          coords     :: ![Coord]
                        }
   deriving (Eq, Show)
+-- NOTE: better to put coords into separate file, indexed from the first. This way we may avoid reading most of the coordinates!
+-- There is a difference between saved ChemShift and Coord files: ~9MB vs ~4GB.
 
 -- | Empty @SortingEntry@
 emptySE k = SE k [] []
@@ -141,9 +126,10 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                  in               Data.List.foldl' addCSToSMap    smapCoords chemShifts
 
 -- | Converts a map of sorting entries, to an ordered list of per-residue SortingEntries (with no gaps.)
-sortSMap = fillGaps . map snd . toAscList . mapKeys resnum
+sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys resnum
 
 -- | Fill gaps in an ordered list of SortingEntry records.
+--   The goal is to assure that selected fragments will have no breaks.
 fillGaps :: [SortingEntry] -> [SortingEntry]
 fillGaps []           = []
 fillGaps (first:rest) = first:fillGaps' (se_key first) rest
@@ -151,24 +137,46 @@ fillGaps (first:rest) = first:fillGaps' (se_key first) rest
     fillGaps' :: ResId -> [SortingEntry] -> [SortingEntry]
     fillGaps' !_           []          = []
     fillGaps' !(ResId n _) (next:rest) = if n+1 == k
-                                           then      next:cont
-                                           else gap :next:cont
+                                           then             next:cont
+                                           else gapSE (n+1):next:cont
       where
         nextKey@(ResId k _) = se_key next
         cont      = fillGaps' nextKey rest
-        gap       = SE { se_key     = ResId { resnum = n+1,
-                                              rescode = "-"
-                                            },
-                         chemShifts = [],
-                         coords     = []
+
+-- | Makes a @SortingEntry@ for a gap in chain with a given residue number.
+gapSE n = SE { se_key     = ResId { resnum  = n
+                                  , rescode = "-"
+                                  }
+             , chemShifts = []
+             , coords     = []
+             }
+
+-- | Makes a @SortingEntry@ for a gap in chain with a given residue number.
+chainTerminusSE n = SE { se_key     = ResId { resnum  = n
+                                            , rescode = "*"
+                                            }
+                       , chemShifts = []
+                       , coords     = []
                        }
+
+-- | This function adds chain terminator.
+--   Perhaps it would be better to use @intercalate@ during reduction.
+--   TODO: Recognize chain breaks within the same file.
+addChainTerminator [] = []
+addChainTerminator (s:ss) = s:addChainTerminator' (keyfun s) ss
+  where
+    keyfun = resnum . se_key
+    addChainTerminator' k []     = [chainTerminusSE (k+1)]
+    addChainTerminator' _ (s:ss) = s:addChainTerminator' (keyfun s) ss
 
 -- | Takes an ordered, sorted per-residue groups of SortingEntry, and returns FASTA sequence.
 --   NOTE: does not yet handle gaps!
 fastaSequence = Data.List.map (toSingleLetterCode' . rescode . se_key)
 
-toSingleLetterCode' "-" = '-'
-toSingleLetterCode' aa  = toSingleLetterCode aa
+toSingleLetterCode' "-"   = '-'
+toSingleLetterCode' "*"   = '*'
+toSingleLetterCode' "TER" = '*'
+toSingleLetterCode' aa    = toSingleLetterCode aa
 
 -- | Merge multiple databases into one.
 mergeResults (r:rs) = return r -- TODO: proper merging!
