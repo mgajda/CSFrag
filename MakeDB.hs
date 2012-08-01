@@ -5,7 +5,7 @@ module Main(main
            ) where
 
 import Prelude hiding(String)
-import System.IO(stderr, hPutStrLn)
+import System.IO(stderr, hPutStrLn, hPutStr)
 import System.Exit
 import System.FilePath
 import System.Environment(getArgs, getProgName)
@@ -16,6 +16,7 @@ import Data.Map as Map hiding (map)
 import Control.Concurrent.ParallelIO
 import qualified Data.Array.Repa as Repa
 import Data.Array.Repa.RepaBinary()
+import qualified Data.ByteString.Char8 as BS
 
 import Data.STAR
 import Data.STAR.Coords
@@ -32,7 +33,9 @@ import Util(withParallel, repaFromList1, repaFromLists2)
 --         Then we should use some kind of parallel queue for reduction?
 --   NOTE: this seems like typical "map-reduce" application, except that reduce is mostly trivial.
 makeDB :: [FilePath] -> IO Database
-makeDB fnames = parallel (Prelude.map dbFromFile fnames) >>= mergeResults
+makeDB fnames = do db <- parallel (Prelude.map dbFromFile fnames) >>= mergeResults
+                   showDbErrors "MERGED" db
+                   return db
 
 -- | Key for sorting dictionary
 data ResId = ResId { resnum  :: !Int
@@ -101,6 +104,9 @@ addCSToSMap    = addToSMap csFilter    csKey    csAdd
 -- | Adds coordinate record to a sorting map, if it passes a filter.
 addCoordToSMap = addToSMap coordFilter coordKey coordAdd
 
+showDbErrors :: String -> Database -> IO ()
+showDbErrors fname db = BS.hPutStr stderr . BS.concat . map (\m -> BS.concat [fname, ":", m, "\n"]) $ checkDb db
+
 -- | Reads a single database
 dbFromFile fname = do putStrLn fname -- TODO: implement reading
                       parsed <- parseSTARFile fname
@@ -116,12 +122,14 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                          printMsg [show (length coords)
                                                   ,"atomic coordinates from"
                                                   ,fname ++ "."]
-                                         print $ head chemShifts
-                                         print $ head coords
                                          let smap = makeSMap chemShifts coords
                                          let ssmap = sortSMap smap
                                          print $ head $ toList smap
+                                         print "AAA"
                                          let result = selistToDb ssmap
+                                         print "BBB"
+                                         showDbErrors (BS.pack fname) result
+                                         print "CCC"
                                          print result
                                          return result
   where
@@ -189,7 +197,7 @@ toSingleLetterCode' aa    = toSingleLetterCode aa
 
 -- | Merge multiple databases into one.
 mergeResults (r:rs) = return r -- TODO: proper merging!
-mergeResuls  _      = return nullDb
+mergeResults _      = return nullDb
 
 -- | Print usage on the command line
 usage = do prog <- getProgName
