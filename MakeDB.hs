@@ -173,6 +173,7 @@ addChainTerminator (s:ss) = s:addChainTerminator' (keyfun s) ss
 --   NOTE: does not yet handle gaps!
 fastaSequence = Data.List.map (toSingleLetterCode' . rescode . se_key)
 
+-- | Extends @toSingleLetterCode@ with treatment of gap, and terminator symbols.
 toSingleLetterCode' "-"   = '-'
 toSingleLetterCode' "*"   = '*'
 toSingleLetterCode' "TER" = '*'
