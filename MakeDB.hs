@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, CPP, BangPatterns #-}
+{-# LANGUAGE FlexibleInstances, CPP, BangPatterns, OverloadedStrings, ScopedTypeVariables #-}
 module Main(main, dbFromFile, mergeResults) where
 
 import Prelude hiding(String)
@@ -140,11 +140,35 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
     makeSMap chemShifts coords = let smapCoords = Data.List.foldl' addCoordToSMap emptySMap  coords
                                  in               Data.List.foldl' addCSToSMap    smapCoords chemShifts
 
-sortSMap = map snd . toAscList . mapKeys resnum
+-- | Converts a map of sorting entries, to an ordered list of per-residue SortingEntries (with no gaps.)
+sortSMap = fillGaps . map snd . toAscList . mapKeys resnum
+
+-- | Fill gaps in an ordered list of SortingEntry records.
+fillGaps :: [SortingEntry] -> [SortingEntry]
+fillGaps []           = []
+fillGaps (first:rest) = first:fillGaps' (se_key first) rest
+  where
+    fillGaps' :: ResId -> [SortingEntry] -> [SortingEntry]
+    fillGaps' !_           []          = []
+    fillGaps' !(ResId n _) (next:rest) = if n+1 == k
+                                           then      next:cont
+                                           else gap :next:cont
+      where
+        nextKey@(ResId k _) = se_key next
+        cont      = fillGaps' nextKey rest
+        gap       = SE { se_key     = ResId { resnum = n+1,
+                                              rescode = "-"
+                                            },
+                         chemShifts = [],
+                         coords     = []
+                       }
 
 -- | Takes an ordered, sorted per-residue groups of SortingEntry, and returns FASTA sequence.
 --   NOTE: does not yet handle gaps!
-fastaSequence = Data.List.map (toSingleLetterCode . rescode . se_key)
+fastaSequence = Data.List.map (toSingleLetterCode' . rescode . se_key)
+
+toSingleLetterCode' "-" = '-'
+toSingleLetterCode' aa  = toSingleLetterCode aa
 
 -- | Merge multiple databases into one.
 mergeResults (r:rs) = return r -- TODO: proper merging!
