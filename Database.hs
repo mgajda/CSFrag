@@ -43,3 +43,8 @@ decodeCompressedFile f = return . decode . decompress =<< BS.readFile f
 
 -- | Encode and compress database file.
 encodeCompressedFile f = BS.writeFile f . compress . encode
+
+-- | Checks database, and produces a list of messages about possible problems.
+--   TODO: implement!
+checkDb :: Database -> [String]
+checkDb db = [] 

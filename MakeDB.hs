@@ -1,5 +1,8 @@
 {-# LANGUAGE FlexibleInstances, BangPatterns, OverloadedStrings, ScopedTypeVariables #-}
-module Main(main, dbFromFile, mergeResults) where
+module Main(main
+           ,dbFromFile
+           ,mergeResults
+           ) where
 
 import Prelude hiding(String)
 import System.IO(stderr, hPutStrLn)
@@ -21,7 +24,7 @@ import Data.STAR.Type(String(..))
 
 import Database
 import ResidueCodes
-import Util(withParallel)
+import Util(withParallel, repaFromList1, repaFromLists2)
 
 -- | Parse .str files and generate arrays in parallel,
 --   then merge results into a single database.
@@ -118,8 +121,9 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                          let smap = makeSMap chemShifts coords
                                          let ssmap = sortSMap smap
                                          print $ head $ toList smap
-                                         print $ fastaSequence ssmap 
-                                         return nullDb
+                                         let result = selistToDb ssmap
+                                         print result
+                                         return result
   where
     printMsg aList = putStrLn $ intercalate " " aList
     makeSMap chemShifts coords = let smapCoords = Data.List.foldl' addCoordToSMap emptySMap  coords
@@ -127,6 +131,10 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
 
 -- | Converts a map of sorting entries, to an ordered list of per-residue SortingEntries (with no gaps.)
 sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys resnum
+
+-- | Converts an ordered list of per-residue @SortingEntry@ records to @Database@
+selistToDb selist = nullDb { resArray = repaFromList1 $ fastaSequence selist
+                           }
 
 -- | Fill gaps in an ordered list of SortingEntry records.
 --   The goal is to assure that selected fragments will have no breaks.
