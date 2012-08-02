@@ -243,7 +243,7 @@ printDims fname db = flip forM_ (\(name, d) -> BS.hPutStrLn stderr . BS.concat $
                        ("resArray",     f resArray),
                        ("csArray",      f csArray),
                        ("csSigmaArray", f csSigmaArray),
-                       ("shiftNames",   f shiftNames)
+                       ("shiftNames",   [length . shiftNames $ db])
                      --  ,("crdArray",     [length .        crdArray $ db,
                      --                    length . head . crdArray $ db])
                      ]

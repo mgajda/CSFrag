@@ -30,7 +30,7 @@ import Data.STAR.ChemShifts as CS
 data Database = Database { resArray     :: Array U DIM1 Char  -- (nRes + nStruct)
                          , csArray      :: Array U DIM2 Float -- (nRes + nStruct) x nShifts
                          , csSigmaArray :: Array U DIM2 Float -- (nRes + nStruct) x nShifts
-                         , shiftNames   :: Array U DIM2 Char  -- nShifts x 2 (max length of chemical shift code)
+                         , shiftNames   :: [String]  -- nShifts (max length of chemical shift code)
                          , crdArray     :: [[Coord]] -- (nRes + nStruct) -> pointers to all coordinates
                                                             -- in each residue (first model only.)
                          }
@@ -75,7 +75,7 @@ makeShiftsSigmas cs = (shifts, sigmas)
 
 -- | Empty database.
 nullDb :: Database
-nullDb = Database emptyArrayDim1 emptyArrayDim2 emptyArrayDim2 emptyArrayDim2 []
+nullDb = Database emptyArrayDim1 emptyArrayDim2 emptyArrayDim2 usedShiftNames []
 
 -- | Decode and decompress database file.
 decodeCompressedFile f = return . decode . decompress =<< BSL.readFile f
@@ -88,7 +88,7 @@ bshow = BS.pack . show
 -- | Checks database, and produces a list of messages about possible problems.
 --   TODO: implement!
 checkDb :: Database -> [BS.ByteString]
-checkDb db = countRes ++ countShifts ++ countCoords ++ countNamesCS ++ shiftNameSize ++ countNamesSigmas ++ countSigmas
+checkDb db = countRes ++ countShifts ++ countCoords ++ countNamesCS ++ countNamesSigmas ++ countSigmas
   where
     outerLen a  = head .        listOfShape . extent $ a
     innerLen a  = head . tail . listOfShape . extent $ a
@@ -97,9 +97,8 @@ checkDb db = countRes ++ countShifts ++ countCoords ++ countNamesCS ++ shiftName
     lenSigmas   = outerLen . csSigmaArray $ db
     widthCS     = innerLen . csArray      $ db
     widthSigmas = innerLen . csSigmaArray $ db
-    widthNames  = innerLen . shiftNames   $ db
     lenCrd      = length   . crdArray     $ db
-    lenNames    = outerLen . shiftNames   $ db
+    lenNames    = length   . shiftNames   $ db
     countRes         = (lenRes     >=10)           `check` ["Found only ", bshow lenRes, " residues."] -- minimum expected number of residues
     countShifts      = (lenRes     == lenCS)       `check` ["Different number of residues ", bshow lenRes, " than shifts ", bshow lenCS, "."]
     countSigmas      = (lenSigmas  == lenCS)       `check` ["Different number of shift records ", bshow lenCS,
@@ -108,7 +107,6 @@ checkDb db = countRes ++ countShifts ++ countCoords ++ countNamesCS ++ shiftName
                                                             " than width of chemical shift array ", bshow lenCS, "."]
     countNamesSigmas = (lenNames   == widthSigmas) `check` ["Different number of chemical shift codes ", bshow widthCS,
                                                             " than width of chemical shift array ", bshow lenCS, "."]
-    shiftNameSize    = (widthNames == 2)           `check` ["Shift names size is ", bshow widthNames, " not 2."]
     countCoords      = (lenRes     == lenCrd)      `check` ["Different number of residues ", bshow lenRes,
                                                             " than coordinate table lists ", bshow lenCrd, "."]
 
