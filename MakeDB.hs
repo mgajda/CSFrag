@@ -9,7 +9,7 @@ import System.IO(stderr, hPutStrLn, hPutStr)
 import System.Exit
 import System.FilePath
 import System.Environment(getArgs, getProgName)
-import Control.Monad(when)
+import Control.Monad(when, forM_)
 import Data.Binary
 import Data.List(intercalate, foldl', map)
 import Data.Map as Map hiding (map)
@@ -135,7 +135,8 @@ addCSToSMap    = addToSMap csFilter    csKey    csAdd
 addCoordToSMap = addToSMap coordFilter coordKey coordAdd
 
 showDbErrors :: String -> Database -> IO ()
-showDbErrors fname db = BS.hPutStr stderr . BS.concat . map (\m -> BS.concat [fname, ":", m, "\n"]) $ checkDb db
+showDbErrors fname db = do printDims fname db
+                           BS.hPutStr stderr . BS.concat . map (\m -> BS.concat [fname, ":", m, "\n"]) $ checkDb db
 
 -- | Reads a single database
 dbFromFile fname = do putStrLn fname -- TODO: implement reading
@@ -237,6 +238,18 @@ mergeResults dbs = Database { resArray     = repaConcat1d $ map resArray     dbs
                             , shiftNames   = shiftNames . head             $ dbs -- TODO: add assertion
                             , crdArray     = L.concatMap        crdArray     dbs
                             }
+
+printDims fname db = flip forM_ (\(name, d) -> BS.hPutStrLn stderr . BS.concat $ [fname, ": ", name, bshow d]) [
+                       ("resArray",     f resArray),
+                       ("csArray",      f csArray),
+                       ("csSigmaArray", f csSigmaArray),
+                       ("shiftNames",   f shiftNames)
+                     --  ,("crdArray",     [length .        crdArray $ db,
+                     --                    length . head . crdArray $ db])
+                     ]
+  where
+    f g = Repa.listOfShape . Repa.extent . g $ db
+    bshow = BS.pack . show
 
 -- | Print usage on the command line
 usage = do prog <- getProgName
