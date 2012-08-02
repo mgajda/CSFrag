@@ -26,7 +26,7 @@ import Data.STAR.Type(String(..))
 
 import Database
 import ResidueCodes
-import Util(withParallel, repaFromList1, repaFromLists2)
+import Util(withParallel, repaFromList1, repaFromLists2, repaConcat2d, repaConcat1d)
 
 import qualified Data.List as L
 import qualified Data.Vector.Unboxed  as V
@@ -62,7 +62,8 @@ makeShiftsSigmas ses = (shifts, sigmas)
 --         Then we should use some kind of parallel queue for reduction?
 --   NOTE: this seems like typical "map-reduce" application, except that reduce is mostly trivial.
 makeDB :: [FilePath] -> IO Database
-makeDB fnames = do db <- parallel (Prelude.map dbFromFile fnames) >>= mergeResults
+makeDB fnames = do dbs <- parallel (Prelude.map dbFromFile fnames)
+                   db <- return $ mergeResults dbs
                    showDbErrors "MERGED" db
                    return db
 
@@ -230,8 +231,12 @@ toSingleLetterCode' "TER" = '*'
 toSingleLetterCode' aa    = toSingleLetterCode aa
 
 -- | Merge multiple databases into one.
-mergeResults (r:rs) = return r -- TODO: proper merging!
-mergeResults _      = return nullDb
+mergeResults dbs = Database { resArray     = repaConcat1d $ map resArray     dbs
+                            , csArray      = repaConcat2d $ map csArray      dbs
+                            , csSigmaArray = repaConcat2d $ map csSigmaArray dbs
+                            , shiftNames   = shiftNames . head             $ dbs -- TODO: add assertion
+                            , crdArray     = L.concatMap        crdArray     dbs
+                            }
 
 -- | Print usage on the command line
 usage = do prog <- getProgName
