@@ -15,17 +15,46 @@ import Data.List(intercalate, foldl', map)
 import Data.Map as Map hiding (map)
 import Control.Concurrent.ParallelIO
 import qualified Data.Array.Repa as Repa
+import Data.Array.Repa.Index(ix2)
 import Data.Array.Repa.RepaBinary()
 import qualified Data.ByteString.Char8 as BS
 
 import Data.STAR
-import Data.STAR.Coords
-import Data.STAR.ChemShifts
+import Data.STAR.Coords     as Coord
+import Data.STAR.ChemShifts as CS
 import Data.STAR.Type(String(..))
 
 import Database
 import ResidueCodes
 import Util(withParallel, repaFromList1, repaFromLists2)
+
+import qualified Data.List as L
+import qualified Data.Vector.Unboxed  as V
+
+-- | Converts a list of @ChemicalShift@s within residue, to a row of CS array.
+shiftsSigmasRow cs = (mkRow shifts, mkRow sigmas)
+  where
+    mkRow al = emptyRow V.// al -- TODO: make a row out of assoclist
+    emptyRow = V.replicate usedShiftsCount 0.0
+    entries  = L.concatMap shiftEntry cs
+    shifts   = L.map fst entries
+    sigmas   = L.map snd entries
+    shiftEntry (ChemShift { CS.atom_id   = atid
+                          , CS.chemshift = value
+                          , CS.sigma     = sigma }) =
+      case atid `L.elemIndex` usedShiftNames of
+        Nothing -> []
+        Just n  -> [((n, value), (n, sigma))]
+
+-- | Make shifts and sigmas arrays.
+makeShiftsSigmas ses = (shifts, sigmas)
+  where
+    cs     = L.map chemShifts ses
+    ssRows = L.map shiftsSigmasRow cs
+    shifts = make . L.map fst $ ssRows
+    sigmas = make . L.map snd $ ssRows
+    !count = L.length cs
+    make   = Repa.fromUnboxed (ix2 count usedShiftsCount) . V.concat
 
 -- | Parse .str files and generate arrays in parallel,
 --   then merge results into a single database.
@@ -141,8 +170,13 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
 sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys resnum
 
 -- | Converts an ordered list of per-residue @SortingEntry@ records to @Database@
-selistToDb selist = nullDb { resArray = repaFromList1 $ fastaSequence selist
+selistToDb selist = nullDb { resArray     = repaFromList1 $ fastaSequence selist
+                           , csArray      = shifts
+                           , csSigmaArray = sigmas
                            }
+  where
+    (shifts, sigmas) = makeShiftsSigmas selist
+
 
 -- | Fill gaps in an ordered list of SortingEntry records.
 --   The goal is to assure that selected fragments will have no breaks.
