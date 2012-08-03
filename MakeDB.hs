@@ -155,13 +155,13 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                                   ,fname ++ "."]
                                          let smap = makeSMap chemShifts coords
                                          let ssmap = sortSMap smap
-                                         print $ head $ toList smap
-                                         print "AAA"
+                                         --print $ head $ toList smap
+                                         --print "AAA"
                                          let result = selistToDb ssmap
-                                         print "BBB"
+                                         --print "BBB"
                                          showDbErrors (BS.pack fname) result
-                                         print "CCC"
-                                         print result
+                                         --print "CCC"
+                                         --print result
                                          return result
   where
     printMsg aList = putStrLn $ intercalate " " aList
