@@ -13,6 +13,7 @@ import Control.Monad(when, forM_)
 import Data.Binary
 import Data.List(intercalate, foldl', map)
 import Data.Map as Map hiding (map)
+import Control.Exception(assert)
 import Control.Concurrent.ParallelIO
 import qualified Data.Array.Repa as Repa
 import Data.Array.Repa.Index(ix2)
@@ -175,6 +176,7 @@ sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys resnum
 selistToDb selist = nullDb { resArray     = repaFromList1 $ fastaSequence selist
                            , csArray      = shifts
                            , csSigmaArray = sigmas
+                           , crdArray     = map coords selist
                            }
   where
     (shifts, sigmas) = makeShiftsSigmas selist
@@ -232,12 +234,16 @@ toSingleLetterCode' "TER" = '*'
 toSingleLetterCode' aa    = toSingleLetterCode aa
 
 -- | Merge multiple databases into one.
-mergeResults dbs = Database { resArray     = repaConcat1d $ map resArray     dbs
+mergeResults dbs = assert allShiftNamesEqual $
+                   Database { resArray     = repaConcat1d $ map resArray     dbs
                             , csArray      = repaConcat2d $ map csArray      dbs
                             , csSigmaArray = repaConcat2d $ map csSigmaArray dbs
                             , shiftNames   = shiftNames . head             $ dbs -- TODO: add assertion
                             , crdArray     = L.concatMap        crdArray     dbs
                             }
+  where
+    firstShiftNames = shiftNames . head $ dbs
+    allShiftNamesEqual = all ((==firstShiftNames) . shiftNames) dbs
 
 printDims fname db = flip forM_ (\(name, d) -> BS.hPutStrLn stderr . BS.concat $ [fname, ": ", name, bshow d]) [
                        ("resArray",     f resArray),
