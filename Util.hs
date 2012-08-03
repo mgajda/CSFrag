@@ -50,11 +50,11 @@ repaConcat1d arrays = Repa.fromUnboxed (Repa.ix1 size) . V.concat . L.map Repa.t
     size = L.foldr (+) 0 shapes
 
 repaConcat2d :: (V.Unbox e) => [Repa.Array Repa.U Repa.DIM2 e] -> Repa.Array Repa.U Repa.DIM2 e
-repaConcat2d arrays = assert fstDimOk $ Repa.fromUnboxed (Repa.ix2 fstDim sndDim) vector
+repaConcat2d arrays = assert fstDimOk $ Repa.fromUnboxed (Repa.ix2 sndDim fstDim) vector
   where
     shapes   = L.map (Repa.listOfShape . Repa.extent) arrays
     vector   = V.concat (L.map Repa.toUnboxed arrays)
     sndDim   = L.foldr (+) 0 $ map (head . tail) shapes
     fstDim   = head fstDims
-    fstDims  = map (head) shapes
+    fstDims  = map head shapes
     fstDimOk = True || (all (==fstDim) fstDims)

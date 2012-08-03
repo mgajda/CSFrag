@@ -90,15 +90,15 @@ bshow = BS.pack . show
 checkDb :: Database -> [BS.ByteString]
 checkDb db = countRes ++ countShifts ++ countCoords ++ countNamesCS ++ countNamesSigmas ++ countSigmas
   where
-    outerLen a  = head .        listOfShape . extent $ a
-    innerLen a  = head . tail . listOfShape . extent $ a
-    lenRes      = outerLen . resArray     $ db
-    lenCS       = outerLen . csArray      $ db
-    lenSigmas   = outerLen . csSigmaArray $ db
-    widthCS     = innerLen . csArray      $ db
-    widthSigmas = innerLen . csSigmaArray $ db
-    lenCrd      = length   . crdArray     $ db
-    lenNames    = length   . shiftNames   $ db
+    firstLen a  = head .        listOfShape . extent $ a
+    secondLen a = head . tail . listOfShape . extent $ a
+    lenRes      = firstLen  . resArray     $ db
+    lenCS       = secondLen . csArray      $ db
+    lenSigmas   = secondLen . csSigmaArray $ db
+    widthCS     = firstLen  . csArray      $ db
+    widthSigmas = firstLen  . csSigmaArray $ db
+    lenCrd      = length    . crdArray     $ db
+    lenNames    = length    . shiftNames   $ db
     countRes         = (lenRes     >=10)           `check` ["Found only ", bshow lenRes, " residues."] -- minimum expected number of residues
     countShifts      = (lenRes     == lenCS)       `check` ["Different number of residues ", bshow lenRes, " than shifts ", bshow lenCS, "."]
     countSigmas      = (lenSigmas  == lenCS)       `check` ["Different number of shift records ", bshow lenCS,
