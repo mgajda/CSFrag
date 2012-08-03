@@ -9,5 +9,6 @@ test: MakeDB
 	bash testit.sh
 
 MakeDB: MakeDB.hs
-	ghc --make -rtsopts -threaded MakeDB
+	ghc --make -rtsopts -with-rtsopts=-H64M\ -A2M -threaded MakeDB
+#	ghc --make -rtsopts -threaded MakeDB
 #	ghc --make -rtsopts -with-rtsopts=-H2G\ -A2M -threaded MakeDB
