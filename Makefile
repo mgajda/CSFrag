@@ -2,7 +2,7 @@
 all: test
 
 clean:
-	find . '(' -iname '*.o' -or -iname '*.hi' ')' -exec rm -f '{}' ';'
+	find . '(' -iname '*.o' -or -iname '*.hi' -or -iname '*.p_o' -or -iname '*.p_hi' ')' -exec rm -f '{}' ';'
 	rm -f Test Test2 Test3 MakeDB
 
 test: MakeDB
