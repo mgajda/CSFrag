@@ -16,3 +16,10 @@ executable  MakeDB
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   build-depends:       base, binary, derive, parsestar, repa, parallel-io, filepath, vector, containers, bytestring, array, zlib
+
+executable  SearchDB
+  default-language:    Haskell2010
+  main-is:             SearchDB.hs
+  other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary ShiftsCSVInput
+  ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
+  build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text
