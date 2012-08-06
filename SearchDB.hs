@@ -39,7 +39,6 @@ computeScores si query db weights = undefined
   where
     shiftsInd i = Repa.slice (csArray db   ) (Repa.Z :. i :. Repa.All)
     queryInd  i = Repa.slice (shifts  query) (Repa.Z :. i :. Repa.All)
-    --seqScores   = Repa
 
 shiftWeights = [] 
 
@@ -47,7 +46,7 @@ shiftWeights = []
 printUsage = do prog <- getProgName
                 putStrLn $ " " `L.intercalate` usage prog
  where
-   usage prog = ["Usage: "
+   usage prog = [ "Usage: "
                 , prog
                 , "<database from MakeDB>"
                 , "<query.csv>"
@@ -68,6 +67,8 @@ main = do args <- getArgs
           putStrLn $ L.concat ["Read ", show csNum, " rows of input."]
           let (si, shiftNameErrs) = shiftIndices (shiftLabels input) (shiftNames db)
           when (shiftNameErrs /= []) . putStrLn . L.intercalate "\n" $ shiftNameErrs
+          seqSim <-(maybe (error "Cannot find file with sequence similarity weights!") SeqSim.seqSim
+                      `fmap` SeqSim.readWeights)
           putStr "Query indices:"
           print si 
        

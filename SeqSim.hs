@@ -1,9 +1,13 @@
 {-# LANGUAGE OverloadedStrings, FlexibleInstances #-}
-module SeqSim(SeqSimWeights,
-              readWeights,
-              seqSim)
+module SeqSim( SeqSimWeights(..)
+             , readWeights
+             , readWeightsFromFile
+             , getDefaultWeightsFilename
+             , prepareSeqSim
+             , seqSim )
 where
 
+import System.FilePath
 import Control.Monad(forM_)
 import Text.ParseCSV(parseCSV)
 import qualified Data.ByteString.Char8 as BS
@@ -50,7 +54,6 @@ symmetrize arr = Repa.traverse arr id xform
                        (-1) -> lookup $ invIndex i
                        v    -> v
 
---mkMatrix :: [Text] -> [(Text, [Int])] -> Array r DIM2 Float
 mkMatrix headers list = assert (map fst list == tail headers ) $
                         assert (squareMatrix . map snd $ list) $
                         symmetrize arr
@@ -63,18 +66,27 @@ computeIndices headers = V.replicate 256 (-1) V.// L.zip ords [0..]
   where
     ords = L.map Data.Char.ord (BS.unpack headers)
 
-readWeights fname = do txt <- TextIO.readFile fname 
-                       let Right result = parseCSV txt
-                       let headers = map T.strip $ head result
-                       let arrP = redParse . map convEntry . tail $ result
-                       case arrP of
-                         Left  msg -> return Nothing
-                         Right arr -> do print $ map (\(_a, vals) -> length vals) arr
-                                         m <- Repa.computeUnboxedP $ mkMatrix headers arr
-                                         let codes = BS.pack . L.concat . map T.unpack $ headers
-                                         return . Just $ SeqSimWeights codes
-                                                                       (computeIndices codes)
-                                                                       m
+-- | TODO: getDefaultWeightsFilename should find data dir!
+getDefaultWeightsFilename = return $ "." </> "share" </> "seqsim.txt"
+
+readWeights = getDefaultWeightsFilename >>= readWeightsFromFile
+
+prepareSeqSim = (maybe errMsg SeqSim.seqSim
+                   `fmap` SeqSim.readWeights)
+  where
+    errMsg = error "Cannot find file with sequence similarity weights!"
+
+readWeightsFromFile fname = do txt <- TextIO.readFile fname 
+                               let Right result = parseCSV txt
+                               let headers = map T.strip $ head result
+                               let arrP = redParse . map convEntry . tail $ result
+                               case arrP of
+                                 Left  msg -> return Nothing
+                                 Right arr -> do m <- Repa.computeUnboxedP $ mkMatrix headers arr
+                                                 let codes = BS.pack . L.concat . map T.unpack $ headers
+                                                 return . Just $ SeqSimWeights codes
+                                                                               (computeIndices codes)
+                                                                               m
 
 -- | Compute sequence match score for a given pair of characters
 seqSim (SeqSimWeights codes indices matrix) a b = matrix Repa.! (Z Repa.:. findInd a Repa.:. findInd b)
