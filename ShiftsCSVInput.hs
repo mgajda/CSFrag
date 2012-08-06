@@ -18,10 +18,11 @@ import Data.Binary
 import qualified Data.List as L
 --import Data.Vector.Unboxed.Base(Unbox(..))
 
-data ShiftsInput = ShiftsInput { headers  :: [String]
-                               , resseq   :: String
-                               , resnums  :: [Int]
-                               , shifts   :: Repa.Array Repa.U Repa.DIM2 Double
+data ShiftsInput = ShiftsInput { headers     :: [String]
+                               , shiftLabels :: [String]
+                               , resseq      :: String
+                               , resnums     :: [Int]
+                               , shifts      :: Repa.Array Repa.U Repa.DIM2 Double
                                }
 
 printErr = System.IO.hPutStrLn System.IO.stderr
@@ -71,15 +72,16 @@ processInputFile fname = do txt <- TextIO.readFile fname
                             case parseCSV txt of
                               Left msg -> do printErr msg
                                              return Nothing
-                              Right result -> do let headers = map strip $ head result
+                              Right result -> do let header = map strip $ head result
                                                  let arrP = redParse $ map convEntry $ tail result
                                                  case arrP of
                                                    Left  msg -> do printErr msg
                                                                    return Nothing
-                                                   Right arr -> do let (nums, seq, m) = mkMatrix headers arr
+                                                   Right arr -> do let (nums, seq, m) = mkMatrix header arr
                                                                    --mat <- Repa.computeUnboxedP m
-                                                                   return $ Just ShiftsInput { headers = map unpack headers
-                                                                                             , resnums = nums
+                                                                   return $ Just ShiftsInput { shiftLabels = tail . tail $ map unpack header
+                                                                                             , headers  = map unpack header
+                                                                                             , resnums     = nums
                                                                                              , resseq  = T.unpack seq
                                                                                              , shifts   = m
                                                                                              }
