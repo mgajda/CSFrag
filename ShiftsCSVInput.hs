@@ -18,11 +18,11 @@ import Data.Binary
 import qualified Data.List as L
 --import Data.Vector.Unboxed.Base(Unbox(..))
 
-data ShiftsInput = ShiftsInput { headers     :: [String]
+data ShiftsInput = ShiftsInput { headers  :: [String]
                                , shiftLabels :: [String]
-                               , resseq      :: String
-                               , resnums     :: [Int]
-                               , shifts      :: Repa.Array Repa.U Repa.DIM2 Double
+                               , resseq   :: String
+                               , resnums  :: [Int]
+                               , shifts   :: Repa.Array Repa.U Repa.DIM2 Double
                                }
 
 printErr = System.IO.hPutStrLn System.IO.stderr
@@ -63,10 +63,10 @@ symmetrize arr = Repa.traverse arr id xform
 mkMatrix :: [Text] -> [(Int, Text, [Double])] -> ([Int], Text, Repa.Array Repa.U DIM2 Double)
 mkMatrix headers list = assert dimensions $ (nums, T.concat aSeq, arr)
   where
-    headerLen         = L.length headers
-    dimensions        = all ((==headerLen) . length) ary
+    headerLen      = L.length headers
+    dimensions     = all ((==headerLen) . length) ary
     (nums, aSeq, ary) = unzip3 list
-    arr               = Repa.fromListUnboxed (Repa.ix2 headerLen $ length ary) . concat $ ary
+    arr            = Repa.fromListUnboxed (Repa.ix2 headerLen $ length ary) . concat $ ary
 
 processInputFile fname = do txt <- TextIO.readFile fname 
                             case parseCSV txt of
@@ -81,7 +81,7 @@ processInputFile fname = do txt <- TextIO.readFile fname
                                                                    --mat <- Repa.computeUnboxedP m
                                                                    return $ Just ShiftsInput { shiftLabels = tail . tail $ map unpack header
                                                                                              , headers  = map unpack header
-                                                                                             , resnums     = nums
+                                                                                             , resnums = nums
                                                                                              , resseq  = T.unpack seq
                                                                                              , shifts   = m
                                                                                              }
