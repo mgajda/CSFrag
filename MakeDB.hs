@@ -32,6 +32,9 @@ import Util(withParallel, repaFromList1, repaFromLists2, repaConcat2d, repaConca
 import qualified Data.List as L
 import qualified Data.Vector.Unboxed  as V
 
+-- TODO: Re-reference chemical shifts?
+-- TODO: Check that all information is from solution NMR?
+
 -- | Converts a list of @ChemicalShift@s within residue, to a row of CS array.
 shiftsSigmasRow cs = (mkRow shifts, mkRow sigmas)
   where
@@ -269,7 +272,7 @@ main = do args <- getArgs
           let dbfname     = last    args
           let inputfnames = butlast args
           db <- withParallel $ makeDB inputfnames
-          encodeFile dbfname db
+          encodeCompressedFile dbfname db
   where
     butlast [b]    = []
     butlast []     = []

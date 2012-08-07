@@ -24,8 +24,8 @@ shiftIndices queryShiftNames dbShiftNames = (xlate, errs)
   where
     maybeIndices  = map (\n -> L.findIndex (shiftEq n) dbShiftNames) queryShiftNames
     xlate = concat $ zipWith3 shiftXlate maybeIndices [1..] dbShiftNames
-    shiftXlate (Just i) j name = [(name, i, j)]
-    shiftXlate Nothing  _ name = []
+    shiftXlate (Just i) j name | any (shiftEq name) weightNames = [(name, i, j)]
+    shiftXlate _        _ _                                     = []
     errs = L.concat $ L.zipWith shiftErr maybeIndices queryShiftNames
     shiftErr (Just i) name = []
     shiftErr Nothing  name = ["No shifts named " ++ name ++ " in database."]
@@ -37,21 +37,35 @@ shiftEq "H" "HN" = True
 shiftEq a   b    = a == b
 
 -- | Fill in index array from assoclist si, and then use it to transfer indices.
-computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Int) -> Repa.Array Repa.D Repa.DIM1 Float
-computeScores si query db seqsim = undefined
+computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Int) -> Repa.Array Repa.D Repa.DIM2 Float
+computeScores si query db seqsim = cutindex (reindex residueScores (-1) Repa.+^
+                                             reindex residueScores   0  Repa.+^
+                                             reindex residueScores   1)
   where
     shiftsInd i = Repa.slice (csArray db   ) (Repa.Z :. i :. Repa.All)
     queryInd  i = Repa.slice (shifts  query) (Repa.Z :. i :. Repa.All)
+    shiftComparison (name, i, j) = (name, outer1 (-) (shiftsInd i) (shiftsInd j ))
+    seqComparison                = ("seqsim", Repa.map fromIntegral $ outer1 seqsim (resArray db) (resseq query))
+    comparisons                  = [seqComparison] ++ map shiftComparison si
+    weightComparison relIndex (name, arr) = case shiftWeights relIndex name of
+                                              Just weight -> Repa.map (*weight) arr
+                                              Nothing     -> error $ "Cannot find index: " ++ show name
+    residueScores relIndex       = foldr1 (Repa.+^) . map (weightComparison relIndex) $ comparisons
+    reindex array relIndex       = array relIndex -- TODO: add zeros on the left and/or right.
+    cutindex array               = array -- TODO: cut leftmost and rightmost column
 
 -- | Returns weight of a given chemical shift at a given position within a fragment.
 shiftWeights :: (RealFloat b) => Int -> String -> Maybe b
 shiftWeights relativeIndex name = assert (relativeIndex <= 1 && relativeIndex >= (-1)) $
-                                  L.lookup name (weights !! (relativeIndex + 1))
-  where
-    weights = [[("seqsim", 0.5), ("HA", 37), ("CA", 11), ("CB",  9), ("CO", 5), ("N",1  ), ("H", 1  )] -- -1 on seq
+                                  L.lookup name (weightsList !! (relativeIndex + 1))
+
+weightsList :: (RealFloat b) => [[(String, b)]]
+weightsList = [[("seqsim", 0.5), ("HA", 37), ("CA", 11), ("CB",  9), ("CO", 5), ("N",1  ), ("H", 1  )] -- -1 on seq
               ,[("seqsim", 2.5), ("HA", 31), ("CA", 14), ("CB", 14), ("CO", 6), ("N",1.5), ("H", 0.3)] --  0 on seq
               ,[("seqsim", 1.5), ("HA", 37), ("CA",  7), ("CB",  7), ("CO", 4), ("N",2  ), ("H", 1.5)] -- +1 on seq
               ]
+
+weightNames = map fst . head $ weightsList
 
 -- | Prints command-line help for the program.
 printUsage = do prog <- getProgName
@@ -76,6 +90,8 @@ main = do args <- getArgs
           putStrLn . ("Header: " ++) . L.intercalate " " . headers $ input
           let inputNum = head . tail . Repa.listOfShape . Repa.extent . shifts $ input
           putStrLn $ L.concat ["Read ", show csNum, " rows of input."]
+          putStrLn $ "Labels: "   ++ show (shiftLabels input)
+          putStrLn $ "DB names: " ++ show (shiftNames  db)
           let (si, shiftNameErrs) = shiftIndices (shiftLabels input) (shiftNames db)
           when (shiftNameErrs /= []) . putStrLn . L.intercalate "\n" $ shiftNameErrs
           seqSim <-(maybe (error "Cannot find file with sequence similarity weights!") SeqSim.seqSim

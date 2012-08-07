@@ -18,11 +18,11 @@ import Data.Binary
 import qualified Data.List as L
 --import Data.Vector.Unboxed.Base(Unbox(..))
 
-data ShiftsInput = ShiftsInput { headers  :: [String]
+data ShiftsInput = ShiftsInput { headers     :: [String]
                                , shiftLabels :: [String]
-                               , resseq   :: String
-                               , resnums  :: [Int]
-                               , shifts   :: Repa.Array Repa.U Repa.DIM2 Double
+                               , resseq      :: Repa.Array Repa.U Repa.DIM1 Char  -- (nRes + nStruct)
+                               , resnums     :: [Int]
+                               , shifts      :: Repa.Array Repa.U Repa.DIM2 Double
                                }
 
 printErr = System.IO.hPutStrLn System.IO.stderr
@@ -63,7 +63,7 @@ symmetrize arr = Repa.traverse arr id xform
 mkMatrix :: [Text] -> [(Int, Text, [Double])] -> ([Int], Text, Repa.Array Repa.U DIM2 Double)
 mkMatrix headers list = assert dimensions $ (nums, T.concat aSeq, arr)
   where
-    headerLen      = L.length headers
+    headerLen      = L.length . tail . tail $ headers
     dimensions     = all ((==headerLen) . length) ary
     (nums, aSeq, ary) = unzip3 list
     arr            = Repa.fromListUnboxed (Repa.ix2 headerLen $ length ary) . concat $ ary
@@ -82,7 +82,7 @@ processInputFile fname = do txt <- TextIO.readFile fname
                                                                    return $ Just ShiftsInput { shiftLabels = tail . tail $ map unpack header
                                                                                              , headers  = map unpack header
                                                                                              , resnums = nums
-                                                                                             , resseq  = T.unpack seq
+                                                                                             , resseq  = Repa.fromListUnboxed (Repa.ix1 . T.length $ seq) (T.unpack seq)
                                                                                              , shifts   = m
                                                                                              }
 
