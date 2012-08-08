@@ -32,6 +32,7 @@ shiftIndices queryShiftNames dbShiftNames = (xlate, errs)
 
 
 -- | Comparing chemical shifts in case names are different, but mean something the same.
+shiftEq :: String -> String -> Bool
 shiftEq "HN" "H" = True
 shiftEq "H" "HN" = True
 shiftEq a   b    = a == b
@@ -42,17 +43,23 @@ computeScores si query db seqsim = cutindex (reindex residueScores (-1) Repa.+^
                                              reindex residueScores   0  Repa.+^
                                              reindex residueScores   1)
   where
-    shiftsInd i = Repa.slice (csArray db   ) (Repa.Z :. i :. Repa.All)
-    queryInd  i = Repa.slice (shifts  query) (Repa.Z :. i :. Repa.All)
-    shiftComparison (name, i, j) = (name, outer1 (-) (shiftsInd i) (shiftsInd j ))
-    seqComparison                = ("seqsim", Repa.map fromIntegral $ outer1 seqsim (resArray db) (resseq query))
-    comparisons                  = [seqComparison] ++ map shiftComparison si
+    shiftComparison (name, i, j) = (name, outer1 (-) (shiftsInd db i) (queryInd query j ))
+    comparisons                  = [seqComparison seqsim db query] ++ map shiftComparison si
     weightComparison relIndex (name, arr) = case shiftWeights relIndex name of
                                               Just weight -> Repa.map (*weight) arr
                                               Nothing     -> error $ "Cannot find index: " ++ show name
     residueScores relIndex       = foldr1 (Repa.+^) . map (weightComparison relIndex) $ comparisons
     reindex array relIndex       = array relIndex -- TODO: add zeros on the left and/or right.
-    cutindex array               = array -- TODO: cut leftmost and rightmost column
+    cutindex array               = array          -- TODO: cut leftmost and rightmost column
+
+seqComparison :: (Num b) => (Char -> Char -> Int)-> Database-> ShiftsInput-> (String, Repa.Array Repa.D ((Z :. Int) :. Int) b)
+seqComparison seqsim db query = ("seqsim", Repa.map fromIntegral $ outer1 seqsim (resArray db) (resseq query))
+
+shiftsInd :: Database-> Int -> Repa.Array Repa.D (Repa.SliceShape (Z :. Int ) :. Int) Float
+shiftsInd db    i = Repa.slice (csArray db   ) (Repa.Z :. i :. Repa.All)
+
+queryInd :: ShiftsInput-> Int -> Repa.Array Repa.D (Repa.SliceShape (Z :. Int) :. Int) Float
+queryInd  query i = Repa.slice (shifts  query) (Repa.Z :. i :. Repa.All)
 
 -- | Returns weight of a given chemical shift at a given position within a fragment.
 shiftWeights :: (RealFloat b) => Int -> String -> Maybe b
@@ -65,6 +72,7 @@ weightsList = [[("seqsim", 0.5), ("HA", 37), ("CA", 11), ("CB",  9), ("CO", 5), 
               ,[("seqsim", 1.5), ("HA", 37), ("CA",  7), ("CB",  7), ("CO", 4), ("N",2  ), ("H", 1.5)] -- +1 on seq
               ]
 
+weightNames :: [String]
 weightNames = map fst . head $ weightsList
 
 -- | Prints command-line help for the program.
@@ -98,7 +106,9 @@ main = do args <- getArgs
                       `fmap` SeqSim.readWeights)
           putStr "Query indices:"
           print si
-          s <- Repa.computeUnboxedP $ computeScores si input db seqSim
+          --s <- Repa.computeUnboxedP $ computeScores si input db seqSim
+          let s = Repa.computeUnboxedS $ computeScores si input db seqSim
+          print . Repa.listOfShape . Repa.extent $ s
           print $ (Repa.toList s :: [Float])
 
 
