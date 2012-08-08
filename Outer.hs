@@ -3,6 +3,7 @@ module Outer(outer2,
              outer1)
 where
 
+import Debug.Trace(trace)
 import Data.Array.Repa               as R
 import Data.Array.Repa.Eval
 import qualified Data.Vector.Unboxed as U
@@ -32,12 +33,13 @@ outer1
      (e1 -> e -> a)
      -> Array r1 DIM1 e1
      -> Array r DIM1 e
-     -> Array D ((Z :. Int) :. Int) a
+     -> Array D DIM2 a
 outer1 f a b = fromFunction resultShape generator
   where
     x, y :: Int
     (Z :. x)  = extent a
     (Z :. y)  = extent b
     resultShape             = Z :. x :. y
-    generator (Z :. x :. y) = (a ! ix1 x) `f` (b ! ix1 y)
+    generator (Z :. x :. y) = {-trace msg () `seq`-} (a ! ix1 x) `f` (b ! ix1 y)
+      where msg = show (x, y, R.extent a, R.extent b)
 
