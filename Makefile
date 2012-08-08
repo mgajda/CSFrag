@@ -8,6 +8,12 @@ clean:
 test: MakeDB SearchDB
 	bash testit.sh
 
+test.prof: SearchDB.prof
+	./SearchDB output.db K18_alone_shifty.csv +RTS -xc
+
+SearchDB.prof: SearchDB.hs Util.hs Outer.hs Database.hs
+	ghc --make SearchDB.hs -prof -auto-all -rtsopts -hisuf p_hi -osuf p_o -o SearchDB.prof
+
 SearchDB: SearchDB.hs
 	ghc --make -rtsopts -with-rtsopts=-H64M\ -A2M -threaded SearchDB
 
