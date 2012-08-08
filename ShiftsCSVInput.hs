@@ -1,10 +1,13 @@
 {-# LANGUAGE OverloadedStrings, FlexibleInstances #-}
-module ShiftsCSVInput(processInputFile, ShiftsInput(..)) where --(main) where
+module ShiftsCSVInput(processInputFile,
+                      ShiftsInput(..) )
+where
 
 import Prelude hiding(sequence)
 import System.Environment(getArgs)
 import qualified System.IO(stderr, hPutStrLn)
 import Control.Monad(forM_)
+import GHC.Float(double2Float)
 import Text.ParseCSV(parseCSV)
 import Data.Text(Text, strip, unpack)
 import qualified Data.Text            as T
@@ -22,26 +25,26 @@ data ShiftsInput = ShiftsInput { headers     :: [String]
                                , shiftLabels :: [String]
                                , resseq      :: Repa.Array Repa.U Repa.DIM1 Char  -- (nRes + nStruct)
                                , resnums     :: [Int]
-                               , shifts      :: Repa.Array Repa.U Repa.DIM2 Double
+                               , shifts      :: Repa.Array Repa.U Repa.DIM2 Float
                                }
 
 printErr = System.IO.hPutStrLn System.IO.stderr
 
-convEntry :: [Text] -> Either String (Int, Text, [Double])
+convEntry :: [Text] -> Either String (Int, Text, [Float])
 convEntry (resnum:rescode:others) =
     do case parseInt resnum of
          Left  msg -> Left msg
          Right num -> do let c = strip rescode
-                         case redParse $ map parseDouble others of
+                         case redParse $ map parseFloat others of
                            Left  msg     -> Left  msg
                            Right pothers -> Right (num, c, pothers)
   where
-    parseDouble ft = case strip ft of
-                       "" -> Right (-1)
-                       fs -> Atto.parseOnly Atto.double fs
-    parseInt    ft = case strip ft of
-                       "" -> Right (-1)
-                       fs -> Atto.parseOnly Atto.decimal fs
+    parseFloat ft = case strip ft of
+                      "" -> Right (-1)
+                      fs -> Atto.parseOnly (double2Float `fmap` Atto.double) fs
+    parseInt   ft = case strip ft of
+                      "" -> Right (-1)
+                      fs -> Atto.parseOnly Atto.decimal fs
 
 redParse []              = Right []
 redParse (Left msg:_   ) = Left msg
@@ -60,7 +63,7 @@ symmetrize arr = Repa.traverse arr id xform
 
 -- TODO: strip spaces from sequence
 -- TODO: assure that each aa code is a single character
-mkMatrix :: [Text] -> [(Int, Text, [Double])] -> ([Int], Text, Repa.Array Repa.U DIM2 Double)
+mkMatrix :: [Text] -> [(Int, Text, [Float])] -> ([Int], Text, Repa.Array Repa.U DIM2 Float)
 mkMatrix headers list = assert dimensions $ (nums, T.concat aSeq, arr)
   where
     headerLen      = L.length . tail . tail $ headers
