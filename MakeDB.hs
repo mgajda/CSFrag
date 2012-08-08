@@ -237,6 +237,7 @@ toSingleLetterCode' "TER" = '*'
 toSingleLetterCode' aa    = toSingleLetterCode aa
 
 -- | Merge multiple databases into one.
+mergeResults ::  [Database] -> Database
 mergeResults dbs = assert allShiftNamesEqual $
                    Database { resArray     = repaConcat1d $ map resArray     dbs
                             , csArray      = repaConcat2d $ map csArray      dbs
