@@ -97,7 +97,12 @@ readWeightsFromFile fname = do txt <- TextIO.readFile fname
 
 -- | Compute sequence match score for a given pair of characters
 seqSim ::  SeqSimWeights -> Char -> Char -> Int
-seqSim (SeqSimWeights codes indices matrix) a b = matrix Repa.! (Z Repa.:. findInd a Repa.:. findInd b)
+seqSim (SeqSimWeights codes indices matrix) a b =
+         if (b == '*') || (b =='-')
+           then error $ "Found " ++ show a ++ "in query sequence!"
+           else if (a =='*') || (a =='-')
+                  then verybad
+                  else matrix Repa.! (Z Repa.:. findInd a Repa.:. findInd b)
   where
     findInd x = if i >= 0
                   then i
@@ -105,4 +110,4 @@ seqSim (SeqSimWeights codes indices matrix) a b = matrix Repa.! (Z Repa.:. findI
       where i = indices V.! Data.Char.ord x
     ai = findInd a
     bi = findInd b
-
+    verybad = -9999999

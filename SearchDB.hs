@@ -1,12 +1,14 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TypeOperators, NoMonomorphismRestriction #-}
 module Main where
 
 import System.Environment(getArgs, getProgName)
 import System.Exit
+import System.IO(hFlush, stdout)
 import Data.Binary
 import Data.List as L
 import Control.Monad(when)
 import Control.Exception(assert)
+import Debug.Trace(trace)
 
 import qualified Data.Array.Repa as Repa
 import Data.Array.Repa((:.)(..), Z)
@@ -23,7 +25,7 @@ import Outer
 shiftIndices queryShiftNames dbShiftNames = (xlate, errs)
   where
     maybeIndices  = map (\n -> L.findIndex (shiftEq n) dbShiftNames) queryShiftNames
-    xlate = concat $ zipWith3 shiftXlate maybeIndices [1..] dbShiftNames
+    xlate = concat $ zipWith3 shiftXlate maybeIndices [0..] dbShiftNames
     shiftXlate (Just i) j name | any (shiftEq name) weightNames = [(name, i, j)]
     shiftXlate _        _ _                                     = []
     errs = L.concat $ L.zipWith shiftErr maybeIndices queryShiftNames
@@ -37,29 +39,47 @@ shiftEq "HN" "H" = True
 shiftEq "H" "HN" = True
 shiftEq a   b    = a == b
 
+traceShape name ary = trace (showShape name ary) ary
+
+showShape name = (\s -> name ++ ": " ++ s) . show . Repa.listOfShape . Repa.extent
+
+traceShapeOfSnd name (a, b) = trace (showShape name b) (a, b)
+
 -- | Fill in index array from assoclist si, and then use it to transfer indices.
 computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Int) -> Repa.Array Repa.D Repa.DIM2 Float
-computeScores si query db seqsim = cutindex (reindex residueScores (-1) Repa.+^
+computeScores si query db seqsim = residueScores 0
+{- 
+ cutindex (reindex residueScores (-1) Repa.+^
                                              reindex residueScores   0  Repa.+^
-                                             reindex residueScores   1)
+                                             reindex residueScores   1) -}
   where
-    shiftComparison (name, i, j) = (name, outer1 (-) (shiftsInd db i) (queryInd query j ))
+    shiftComparison (name, i, j) = traceShapeOfSnd "shiftComparison" (name, outer1 (-) (shiftsInd db i) (queryInd query j ))
+    --comparisons                  = [seqComparison seqsim db query, head $ map shiftComparison si]
+    --comparisons                  = [seqComparison seqsim db query] ++ drop 4 (take 5 (map shiftComparison si))
     comparisons                  = [seqComparison seqsim db query] ++ map shiftComparison si
+    --comparisons                  = (foldr1 (\a b -> a `seq` b) (map (\(name, arr) -> traceShape name arr)
+    --                                  $ [seqComparison seqsim db query] ++ map shiftComparison si))
+    --                               `seq` [head $ map shiftComparison si]
     weightComparison relIndex (name, arr) = case shiftWeights relIndex name of
-                                              Just weight -> Repa.map (*weight) arr
+                                              Just weight -> arr --Repa.map (*weight) arr
                                               Nothing     -> error $ "Cannot find index: " ++ show name
-    residueScores relIndex       = foldr1 (Repa.+^) . map (weightComparison relIndex) $ comparisons
-    reindex array relIndex       = array relIndex -- TODO: add zeros on the left and/or right.
-    cutindex array               = array          -- TODO: cut leftmost and rightmost column
+    --residueScores relIndex       = foldr1 (Repa.+^) . map (weightComparison relIndex) $ comparisons
+    residueScores relIndex = foldr1 (Repa.+^) . map (weightComparison relIndex) $ comparisons
+    reindex array relIndex = array relIndex -- TODO: add zeros on the left and/or right.
+    cutindex array         = array          -- TODO: cut leftmost and rightmost column
+
+elementWise f a b = assert (Repa.extent a == Repa.extent b) $
+                      Repa.fromFunction (Repa.extent a)
+                                        (\i -> (a Repa.! i) `f` (b Repa.! i))
 
 seqComparison :: (Num b) => (Char -> Char -> Int)-> Database-> ShiftsInput-> (String, Repa.Array Repa.D ((Z :. Int) :. Int) b)
-seqComparison seqsim db query = ("seqsim", Repa.map fromIntegral $ outer1 seqsim (resArray db) (resseq query))
+seqComparison seqsim db query = traceShapeOfSnd "seqComparison" ("seqsim", Repa.map fromIntegral $ outer1 seqsim (resArray db) (resseq query))
 
 shiftsInd :: Database-> Int -> Repa.Array Repa.D (Repa.SliceShape (Z :. Int ) :. Int) Float
-shiftsInd db    i = Repa.slice (csArray db   ) (Repa.Z :. i :. Repa.All)
+shiftsInd db    i = traceShape "shiftsInd" $ Repa.slice (csArray db   ) (Repa.Z :. Repa.All :. i)
 
 queryInd :: ShiftsInput-> Int -> Repa.Array Repa.D (Repa.SliceShape (Z :. Int) :. Int) Float
-queryInd  query i = Repa.slice (shifts  query) (Repa.Z :. i :. Repa.All)
+queryInd  query i = traceShape "queryInd"  $ Repa.slice (shifts  query) (Repa.Z :. i :. Repa.All)
 
 -- | Returns weight of a given chemical shift at a given position within a fragment.
 shiftWeights :: (RealFloat b) => Int -> String -> Maybe b
@@ -92,12 +112,16 @@ main = do args <- getArgs
                                         exitFailure
           let [dbfname, shiftsfname] = args
           (db :: Database) <- decodeCompressedFile dbfname
-          let csNum = head . tail . Repa.listOfShape . Repa.extent . csArray $ db
+          let csNum   = head . tail . Repa.listOfShape . Repa.extent . csArray $ db
+          let csShape =               Repa.listOfShape . Repa.extent . csArray $ db
           putStrLn $ L.concat ["Read ", show csNum, " chemical shifts."]
+          putStrLn $ L.concat ["Read shifts array of shape ", show csShape]
           Just input <- processInputFile shiftsfname
           putStrLn . ("Header: " ++) . L.intercalate " " . headers $ input
-          let inputNum = head . tail . Repa.listOfShape . Repa.extent . shifts $ input
-          putStrLn $ L.concat ["Read ", show csNum, " rows of input."]
+          let inputNum   = head . tail . Repa.listOfShape . Repa.extent . shifts $ input
+          let inputShape =               Repa.listOfShape . Repa.extent . shifts $ input
+          putStrLn $ L.concat ["Read ", show inputNum, " rows of input."]
+          putStrLn $ L.concat ["Read input of shape ", show inputShape]
           putStrLn $ "Labels: "   ++ show (shiftLabels input)
           putStrLn $ "DB names: " ++ show (shiftNames  db)
           let (si, shiftNameErrs) = shiftIndices (shiftLabels input) (shiftNames db)
@@ -106,9 +130,13 @@ main = do args <- getArgs
                       `fmap` SeqSim.readWeights)
           putStr "Query indices:"
           print si
-          --s <- Repa.computeUnboxedP $ computeScores si input db seqSim
-          let s = Repa.computeUnboxedS $ computeScores si input db seqSim
-          print . Repa.listOfShape . Repa.extent $ s
+          hFlush stdout 
+          let compsco = computeScores si input db seqSim
+          --computeScores si input db seqSim
+          --let s = Repa.computeUnboxedS $ 
+          print . ("Final shape:" ++) . show . Repa.listOfShape . Repa.extent $ compsco
+          hFlush stdout 
+          s <- Repa.computeUnboxedP $ compsco
           print $ (Repa.toList s :: [Float])
 
 

@@ -20,8 +20,8 @@ import Control.Exception(assert)
 --   Here is code for parallellism
 -- | Sets up as many capabilities as we have processors.
 #ifdef __GLASGOW_HASKELL__
---setupParallel = GHC.Conc.getNumProcessors >>= GHC.Conc.setNumCapabilities
-setupParallel = return ()
+setupParallel = GHC.Conc.getNumProcessors >>= GHC.Conc.setNumCapabilities
+--setupParallel = return ()
 #else
 setupParallel = return ()
 #endif
