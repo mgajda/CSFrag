@@ -8,5 +8,6 @@ Test2
 Test3
 MakeDB
 SearchDB
+TestOuter
 output.db
 dist/

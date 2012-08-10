@@ -40,6 +40,6 @@ outer1 f a b = fromFunction resultShape generator
     (Z :. x)  = extent a
     (Z :. y)  = extent b
     resultShape             = Z :. x :. y
-    generator (Z :. x :. y) = {-trace msg () `seq`-} (a ! ix1 x) `f` (b ! ix1 y)
+    generator (Z :. x :. y) = (a ! ix1 x) `f` (b ! ix1 y)
       where msg = show (x, y, R.extent a, R.extent b)
 

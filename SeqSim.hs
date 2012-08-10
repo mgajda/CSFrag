@@ -110,4 +110,4 @@ seqSim (SeqSimWeights codes indices matrix) a b =
       where i = indices V.! Data.Char.ord x
     ai = findInd a
     bi = findInd b
-    verybad = -9999999
+    verybad = -999999
