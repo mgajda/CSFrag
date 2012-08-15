@@ -47,11 +47,9 @@ traceShapeOfSnd name (a, b) = trace (showShape name b) (a, b)
 
 -- | Fill in index array from assoclist si, and then use it to transfer indices.
 computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Int) -> Repa.Array Repa.D Repa.DIM2 Float
-computeScores si query db seqsim = residueScores 0
-{- 
- cutindex (reindex residueScores (-1) Repa.+^
-                                             reindex residueScores   0  Repa.+^
-                                             reindex residueScores   1) -}
+computeScores si query db seqsim = shiftIndex (-1) 0.0 (residueScores (-1)) Repa.+^
+                                   residueScores                        0   Repa.+^
+                                   shiftIndex   1  0.0 (residueScores   1 )
   where
     shiftComparison (name, i, j) = traceShapeOfSnd "shiftComparison" (name, outer1 (-) (shiftsInd db i) (queryInd query j ))
     comparisons                  = [seqComparison seqsim db query] ++ map shiftComparison si
@@ -65,6 +63,16 @@ computeScores si query db seqsim = residueScores 0
 elementWise f a b = assert (Repa.extent a == Repa.extent b) $
                       Repa.fromFunction (Repa.extent a)
                                         (\i -> (a Repa.! i) `f` (b Repa.! i))
+
+shiftIndex :: Repa.Source r1 e => Int -> e -> Repa.Array r1 Repa.DIM2 e -> Repa.Array Repa.D Repa.DIM2 e
+shiftIndex shift defaultValue arr = Repa.backpermuteDft defaultsArray indexMapping arr
+  where
+    shape         = Repa.extent arr
+    defaultsArray = Repa.fromFunction shape (\sh -> defaultValue)
+    indexMapping  (Repa.Z :. x :. y) = let sh :: Repa.DIM2 = Repa.Z :. x :. (y + shift)
+                                  in if sh `Repa.inShape` shape
+                                       then Just sh
+                                       else Nothing
 
 seqComparison :: (Num b) => (Char -> Char -> Int)-> Database-> ShiftsInput-> (String, Repa.Array Repa.D ((Z :. Int) :. Int) b)
 seqComparison seqsim db query = traceShapeOfSnd "seqComparison" ("seqsim", Repa.map fromIntegral $ outer1 seqsim (resArray db) (resseq query))
