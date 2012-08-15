@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings, FlexibleInstances, ScopedTypeVariables #-}
 module SeqSim( SeqSimWeights(..)
              , readWeights
              , readWeightsFromFile
@@ -76,7 +76,7 @@ getDefaultWeightsFilename = return $ "." </> "share" </> "seqsim.txt"
 readWeights ::  IO (Maybe SeqSimWeights)
 readWeights = getDefaultWeightsFilename >>= readWeightsFromFile
 
-prepareSeqSim ::  IO (Char -> Char -> Int)
+prepareSeqSim ::  IO (Char -> Char -> Float)
 prepareSeqSim = (maybe errMsg SeqSim.seqSim
                    `fmap` SeqSim.readWeights)
   where
@@ -96,13 +96,13 @@ readWeightsFromFile fname = do txt <- TextIO.readFile fname
                                                                                m
 
 -- | Compute sequence match score for a given pair of characters
-seqSim ::  SeqSimWeights -> Char -> Char -> Int
+seqSim ::  SeqSimWeights -> Char -> Char -> Float
 seqSim (SeqSimWeights codes indices matrix) a b =
          if (b == '*') || (b =='-')
            then error $ "Found " ++ show a ++ "in query sequence!"
            else if (a =='*') || (a =='-')
                   then verybad
-                  else matrix Repa.! (Z Repa.:. findInd a Repa.:. findInd b)
+                  else fromIntegral $ matrix Repa.! (Z Repa.:. findInd a Repa.:. findInd b)
   where
     findInd x = if i >= 0
                   then i
@@ -110,4 +110,4 @@ seqSim (SeqSimWeights codes indices matrix) a b =
       where i = indices V.! Data.Char.ord x
     ai = findInd a
     bi = findInd b
-    verybad = -999999
+    verybad :: Float = read "-Infinity"

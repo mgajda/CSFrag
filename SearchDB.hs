@@ -46,12 +46,12 @@ showShape name = (\s -> name ++ ": " ++ s) . show . Repa.listOfShape . Repa.exte
 traceShapeOfSnd name (a, b) = trace (showShape name b) (a, b)
 
 -- | Fill in index array from assoclist si, and then use it to transfer indices.
-computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Int) -> Repa.Array Repa.D Repa.DIM2 Float
+computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Float) -> Repa.Array Repa.D Repa.DIM2 Float
 computeScores si query db seqsim = shiftIndex (-1) 0.0 (residueScores (-1)) Repa.+^
                                    residueScores                        0   Repa.+^
                                    shiftIndex   1  0.0 (residueScores   1 )
   where
-    shiftComparison (name, i, j) = traceShapeOfSnd "shiftComparison" (name, outer1 (-) (shiftsInd db i) (queryInd query j ))
+    shiftComparison (name, i, j) = traceShapeOfSnd "shiftComparison" (name, outer1 absDiff (shiftsInd db i) (queryInd query j ))
     comparisons                  = [seqComparison seqsim db query] ++ map shiftComparison si
     weightComparison relIndex (name, arr) = case shiftWeights relIndex name of
                                               Just weight -> Repa.map (*weight) arr
@@ -59,6 +59,7 @@ computeScores si query db seqsim = shiftIndex (-1) 0.0 (residueScores (-1)) Repa
     residueScores relIndex = foldr1 (Repa.+^) . map (weightComparison relIndex) $ comparisons
     reindex array relIndex = array relIndex -- TODO: add zeros on the left and/or right.
     cutindex array         = array          -- TODO: cut leftmost and rightmost column
+    a `absDiff` b          = abs (a - b)
 
 elementWise f a b = assert (Repa.extent a == Repa.extent b) $
                       Repa.fromFunction (Repa.extent a)
@@ -74,8 +75,8 @@ shiftIndex shift defaultValue arr = Repa.backpermuteDft defaultsArray indexMappi
                                        then Just sh
                                        else Nothing
 
-seqComparison :: (Num b) => (Char -> Char -> Int)-> Database-> ShiftsInput-> (String, Repa.Array Repa.D ((Z :. Int) :. Int) b)
-seqComparison seqsim db query = traceShapeOfSnd "seqComparison" ("seqsim", Repa.map fromIntegral $ outer1 seqsim (resArray db) (resseq query))
+seqComparison :: (Char -> Char -> Float)-> Database-> ShiftsInput-> (String, Repa.Array Repa.D ((Z :. Int) :. Int) Float)
+seqComparison seqsim db query = traceShapeOfSnd "seqComparison" ("seqsim", outer1 seqsim (resArray db) (resseq query))
 
 shiftsInd :: Database-> Int -> Repa.Array Repa.D (Repa.SliceShape (Z :. Int ) :. Int) Float
 shiftsInd db    i = traceShape "shiftsInd" $ Repa.slice (csArray db   ) (Repa.Z :. Repa.All :. i)
@@ -134,8 +135,6 @@ main = do args <- getArgs
           print si
           hFlush stdout 
           let compsco = computeScores si input db seqSim
-          --computeScores si input db seqSim
-          --let s = Repa.computeUnboxedS $ 
           print . ("Final shape:" ++) . show . Repa.listOfShape . Repa.extent $ compsco
           hFlush stdout 
           s <- Repa.computeUnboxedP $ compsco
