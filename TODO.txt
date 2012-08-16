@@ -1,3 +1,5 @@
 Check with Wishart's lab about exact SEQSEE matrix.
 
 Assymetric seqsim comparison for '*' and '-' -> 0 for missing query, verybad for missing database entry.
+
+Example ubiquitin structure in BMRB: merged_15547_2jx5.str.gz.
