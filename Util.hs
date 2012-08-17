@@ -16,12 +16,20 @@ import qualified Data.Array.Repa     as Repa
 import qualified Data.List           as L
 import qualified Data.Vector.Unboxed as V
 import Control.Exception(assert)
+import Control.Monad(when)
+import GHC.Environment(getFullArgs) -- to check RTS params
 
 --   Here is code for parallellism
 -- | Sets up as many capabilities as we have processors.
 #ifdef __GLASGOW_HASKELL__
-setupParallel = GHC.Conc.getNumProcessors >>= GHC.Conc.setNumCapabilities
---setupParallel = return ()
+setupParallel = do rtsConcArgs <- filter (L.isPrefixOf "-N") `fmap` getFullArgs
+                   when (rtsConcArgs == []) $ do
+                     nProc <- GHC.Conc.getNumProcessors
+                     let nCap = min 12 nProc
+                     putStrLn $ concat ["Found ", show nProc, " processors ",
+                                        " and no -N argument - initializing ",
+                                        show nCap, "capabilities."]
+                     GHC.Conc.setNumCapabilities nCap
 #else
 setupParallel = return ()
 #endif
