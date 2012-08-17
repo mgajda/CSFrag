@@ -28,7 +28,7 @@ setupParallel = do rtsConcArgs <- filter (L.isPrefixOf "-N") `fmap` getFullArgs
                      let nCap = min 12 nProc
                      putStrLn $ concat ["Found ", show nProc, " processors ",
                                         " and no -N argument - initializing ",
-                                        show nCap, "capabilities."]
+                                        show nCap, " capabilities."]
                      GHC.Conc.setNumCapabilities nCap
 #else
 setupParallel = return ()

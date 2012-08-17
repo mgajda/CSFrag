@@ -67,7 +67,7 @@ makeShiftsSigmas ses = (shifts, sigmas)
 --   NOTE: this seems like typical "map-reduce" application, except that reduce is mostly trivial.
 makeDB :: [FilePath] -> IO Database
 makeDB fnames = do dbs <- parallel (Prelude.map dbFromFile fnames)
-                   db <- return $ mergeResults dbs
+                   db <- return . mergeResults $ dbs
                    showDbErrors "MERGED" db
                    return db
 
@@ -146,27 +146,22 @@ showDbErrors fname db = do printDims fname db
 dbFromFile fname = do putStrLn fname -- TODO: implement reading
                       parsed <- parseSTARFile fname
                       case parsed of
-                        Left errmsg ->do hPutStrLn stderr errmsg
-                                         return nullDb
-                        Right star  ->do let chemShifts = extractChemShifts star
-                                         let coords     = extractCoords     star
-                                         --chemShifts `par` coords `par` ...
-                                         printMsg [show (length chemShifts)
-                                                  ,"chemical shifts from"
-                                                  ,fname ++ "."]
-                                         printMsg [show (length coords)
-                                                  ,"atomic coordinates from"
-                                                  ,fname ++ "."]
-                                         let smap = makeSMap chemShifts coords
-                                         let ssmap = sortSMap smap
-                                         --print $ head $ toList smap
-                                         --print "AAA"
-                                         let result = selistToDb ssmap
-                                         --print "BBB"
-                                         showDbErrors (BS.pack fname) result
-                                         --print "CCC"
-                                         --print result
-                                         return result
+                        Left errmsg -> do hPutStrLn stderr $ Prelude.concat ["In file ", fname, ": ", errmsg]
+                                          return nullDb
+                        Right star  -> do let chemShifts = extractChemShifts star
+                                          let coords     = extractCoords     star
+                                          --chemShifts `par` coords `par` ...
+                                          printMsg [show (length chemShifts)
+                                                   ,"chemical shifts from"
+                                                   ,fname ++ "."]
+                                          printMsg [show (length coords)
+                                                   ,"atomic coordinates from"
+                                                   ,fname ++ "."]
+                                          let smap = makeSMap chemShifts coords
+                                          let ssmap = sortSMap smap
+                                          let result = selistToDb ssmap
+                                          showDbErrors (BS.pack fname) result
+                                          return result
   where
     printMsg aList = putStrLn $ intercalate " " aList
     makeSMap chemShifts coords = let smapCoords = Data.List.foldl' addCoordToSMap emptySMap  coords

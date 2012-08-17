@@ -42,7 +42,7 @@ $(derive makeBinary ''Database)
 emptyArrayDim1 = fromListUnboxed (ix1 0  ) []
 
 -- | Empty array of rank 2
-emptyArrayDim2 = fromListUnboxed (ix2 0 0) []
+emptyArrayDim2 = fromListUnboxed (ix2 0 usedShiftsCount) []
 
 usedShiftNames = ["CA", "CB", "CO", "HA", "N", "H"]
 -- NOTE: "H" are also sometimes called "HN"
