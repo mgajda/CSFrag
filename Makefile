@@ -20,7 +20,8 @@ SearchDB: SearchDB.hs Util.hs Outer.hs Database.hs Util.hs SeqSim.hs
 
 MakeDB: MakeDB.hs Util.hs Database.hs
 	ghc --make -rtsopts -with-rtsopts=-H64M\ -A2M -threaded MakeDB
-#	ghc --make -rtsopts -threaded MakeDB
+#	ghc --make -rtsopts -with-rtsopts=-H64M\ -A2M\ -k16 -threaded MakeDB
 #	ghc --make -rtsopts -with-rtsopts=-H2G\ -A2M -threaded MakeDB
+
 TestOuter: Outer.hs TestOuter.hs
 	ghc --make -rtsopts -with-rtsopts=-H64M\ -A2M -threaded TestOuter
