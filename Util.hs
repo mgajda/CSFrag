@@ -55,15 +55,14 @@ repaFromLists2 l = assert allLike $ Repa.fromListUnboxed (Repa.ix2 len2 len1) $ 
 repaConcat1d :: (V.Unbox e) => [Repa.Array Repa.U Repa.DIM1 e] -> Repa.Array Repa.U Repa.DIM1 e
 repaConcat1d arrays = Repa.fromUnboxed (Repa.ix1 size) . V.concat . L.map Repa.toUnboxed $ arrays
   where
-    shapes = L.map (head . Repa.listOfShape . Repa.extent) arrays
-    size = L.foldr (+) 0 shapes
+    size= sum $ L.map (head . Repa.listOfShape . Repa.extent) arrays
 
 repaConcat2d :: (V.Unbox e) => [Repa.Array Repa.U Repa.DIM2 e] -> Repa.Array Repa.U Repa.DIM2 e
 repaConcat2d arrays = assert fstDimOk $ Repa.fromUnboxed (Repa.ix2 sndDim fstDim) vector
   where
     shapes   = L.map (Repa.listOfShape . Repa.extent) arrays
     vector   = V.concat (L.map Repa.toUnboxed arrays)
-    sndDim   = L.foldr (+) 0 $ map (head . tail) shapes
+    sndDim   = sum $ map (head . tail) shapes
     fstDim   = head fstDims
     fstDims  = map head shapes
-    fstDimOk = True || (all (==fstDim) fstDims)
+    fstDimOk = all (==fstDim) fstDims

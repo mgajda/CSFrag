@@ -163,7 +163,7 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                           showDbErrors (BS.pack fname) result
                                           return result
   where
-    printMsg aList = putStrLn $ intercalate " " aList
+    printMsg aList = putStrLn $ unwords aList
     makeSMap chemShifts coords = let smapCoords = Data.List.foldl' addCoordToSMap emptySMap  coords
                                  in               Data.List.foldl' addCSToSMap    smapCoords chemShifts
 
@@ -233,7 +233,7 @@ toSingleLetterCode' aa    = toSingleLetterCode aa
 
 -- | Merge multiple databases into one.
 mergeResults ::  [Database] -> Database
-mergeResults dbs = assert allShiftNamesEqual $
+mergeResults dbs = assert allShiftNamesEqual
                    Database { resArray     = repaConcat1d $ map resArray     dbs
                             , csArray      = repaConcat2d $ map csArray      dbs
                             , csSigmaArray = repaConcat2d $ map csSigmaArray dbs
@@ -244,7 +244,7 @@ mergeResults dbs = assert allShiftNamesEqual $
     firstShiftNames = shiftNames . head $ dbs
     allShiftNamesEqual = all ((==firstShiftNames) . shiftNames) dbs
 
-printDims fname db = flip forM_ (\(name, d) -> BS.hPutStrLn stderr . BS.concat $ [fname, ": ", name, bshow d]) [
+printDims fname db = mapM_ (\(name, d) -> BS.hPutStrLn stderr . BS.concat $ [fname, ": ", name, bshow d]) [
                        ("resArray",     f resArray),
                        ("csArray",      f csArray),
                        ("csSigmaArray", f csSigmaArray),

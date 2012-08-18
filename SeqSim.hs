@@ -47,7 +47,7 @@ redParse (Right f :rest) = case redParse rest of
     Left  msg   -> Left msg
 
 invIndex :: DIM2 -> DIM2
-invIndex (Z Repa.:. x Repa.:. y) = (Z Repa.:. y Repa.:. x)
+invIndex (Z Repa.:. x Repa.:. y) = Z Repa.:. y Repa.:. x
 
 symmetrize :: (Eq b, Num b, Repa.Source r b) =>Repa.Array r DIM2 b -> Repa.Array Repa.D DIM2 b
 symmetrize arr = Repa.traverse arr id xform
@@ -63,7 +63,7 @@ mkMatrix headers list = assert (map fst list == tail headers ) $
   where
     squareMatrix m = all ((==size) . length) m
     size           = length list
-    arr            = Repa.fromListUnboxed (Repa.ix2 size size) . concat . map snd $ list
+    arr            = Repa.fromListUnboxed (Repa.ix2 size size) . concatMap snd $ list
 
 computeIndices headers = V.replicate 256 (-1) V.// L.zip ords [0..]
   where
@@ -77,8 +77,8 @@ readWeights ::  IO (Maybe SeqSimWeights)
 readWeights = getDefaultWeightsFilename >>= readWeightsFromFile
 
 prepareSeqSim ::  IO (Char -> Char -> Float)
-prepareSeqSim = (maybe errMsg SeqSim.seqSim
-                   `fmap` SeqSim.readWeights)
+prepareSeqSim = maybe errMsg SeqSim.seqSim
+                  `fmap` SeqSim.readWeights
   where
     errMsg = error "Cannot find file with sequence similarity weights!"
 
@@ -90,19 +90,16 @@ readWeightsFromFile fname = do txt <- TextIO.readFile fname
                                case arrP of
                                  Left  msg -> return Nothing
                                  Right arr -> do m <- Repa.computeUnboxedP $ mkMatrix headers arr
-                                                 let codes = BS.pack . L.concat . map T.unpack $ headers
+                                                 let codes = BS.pack $ L.concatMap T.unpack headers
                                                  return . Just $ SeqSimWeights codes
                                                                                (computeIndices codes)
                                                                                m
 
 -- | Compute sequence match score for a given pair of characters
 seqSim ::  SeqSimWeights -> Char -> Char -> Float
-seqSim (SeqSimWeights codes indices matrix) a b =
-         if (b == '*') || (b =='-')
-           then error $ "Found " ++ show a ++ "in query sequence!"
-           else if (a =='*') || (a =='-')
-                  then verybad
-                  else fromIntegral $ matrix Repa.! (Z Repa.:. findInd a Repa.:. findInd b)
+seqSim _ _ b | (b == '*') || (b =='-') = error $ "Found " ++ show b ++ "in query sequence!"
+seqSim _ a _ | (a == '*') || (a =='-') = read "-Infinity" :: Float
+seqSim (SeqSimWeights codes indices matrix) a b = fromIntegral $ matrix Repa.! (Z Repa.:. findInd a Repa.:. findInd b)
   where
     findInd x = if i >= 0
                   then i
@@ -110,4 +107,3 @@ seqSim (SeqSimWeights codes indices matrix) a b =
       where i = indices V.! Data.Char.ord x
     ai = findInd a
     bi = findInd b
-    verybad :: Float = read "-Infinity"

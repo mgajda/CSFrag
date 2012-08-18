@@ -8,7 +8,7 @@ where
 import Prelude hiding(String)
 import Data.Array
 import Data.Map hiding((!))
-import qualified Data.List(zipWith)
+import qualified Data.List(zipWith, zip)
 import Data.ByteString.Char8 as BSC
 
 -- | Three-letter codes for standard aminoacids
@@ -39,6 +39,6 @@ toThreeLetterCode c = case BSC.elemIndex c stdAaSLC of
 toSingleLetterCode :: ByteString -> Char
 toSingleLetterCode c = Data.Map.findWithDefault 'X' c tlcMap
 
-tlcMap = Data.Map.fromList $ Data.List.zipWith (,) (Data.Array.elems stdAaTLC) (BSC.unpack stdAaSLC)
+tlcMap = Data.Map.fromList $ Data.List.zip (Data.Array.elems stdAaTLC) (BSC.unpack stdAaSLC)
 
 stopCode='*'

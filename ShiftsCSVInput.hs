@@ -32,12 +32,12 @@ printErr = System.IO.hPutStrLn System.IO.stderr
 
 convEntry :: [Text] -> Either String (Int, Text, [Float])
 convEntry (resnum:rescode:others) =
-    do case parseInt resnum of
-         Left  msg -> Left msg
-         Right num -> do let c = strip rescode
-                         case redParse $ map parseFloat others of
-                           Left  msg     -> Left  msg
-                           Right pothers -> Right (num, c, pothers)
+    case parseInt resnum of
+      Left  msg -> Left msg
+      Right num -> do let c = strip rescode
+                      case redParse $ map parseFloat others of
+                        Left  msg     -> Left  msg
+                        Right pothers -> Right (num, c, pothers)
   where
     parseFloat ft = case strip ft of
                       "" -> Right (-1)
@@ -53,7 +53,7 @@ redParse (Right f :rest) = case redParse rest of
     Left  msg   -> Left msg
 
 invIndex :: DIM2 -> DIM2
-invIndex (Z :. x :. y) = (Z :. y :. x)
+invIndex (Z :. x :. y) = Z :. y :. x
 
 symmetrize arr = Repa.traverse arr id xform
   where
@@ -64,7 +64,7 @@ symmetrize arr = Repa.traverse arr id xform
 -- TODO: strip spaces from sequence
 -- TODO: assure that each aa code is a single character
 mkMatrix :: [Text] -> [(Int, Text, [Float])] -> ([Int], Text, Repa.Array Repa.U DIM2 Float)
-mkMatrix headers list = assert dimensions $ (nums, T.concat aSeq, arr)
+mkMatrix headers list = assert dimensions (nums, T.concat aSeq, arr)
   where
     headerLen      = L.length . tail . tail $ headers
     dimensions     = all ((==headerLen) . length) ary

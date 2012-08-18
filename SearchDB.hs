@@ -52,7 +52,7 @@ computeScores si query db seqsim = shiftIndex (-1) 0.0 (residueScores (-1)) Repa
                                    shiftIndex   1  0.0 (residueScores   1 )
   where
     shiftComparison (name, i, j) = traceShapeOfSnd "shiftComparison" (name, outer1 absDiff (shiftsInd db i) (queryInd query j ))
-    comparisons                  = [seqComparison seqsim db query] ++ map shiftComparison si
+    comparisons                  = seqComparison seqsim db query : map shiftComparison si
     weightComparison relIndex (name, arr) = case shiftWeights relIndex name of
                                               Just weight -> Repa.map (*weight) arr
                                               Nothing     -> error $ "Cannot find index: " ++ show name
@@ -69,7 +69,7 @@ shiftIndex :: Repa.Source r1 e => Int -> e -> Repa.Array r1 Repa.DIM2 e -> Repa.
 shiftIndex shift defaultValue arr = Repa.backpermuteDft defaultsArray indexMapping arr
   where
     shape         = Repa.extent arr
-    defaultsArray = Repa.fromFunction shape (\sh -> defaultValue)
+    defaultsArray = Repa.fromFunction shape (const defaultValue)
     indexMapping  (Repa.Z :. x :. y) = let sh :: Repa.DIM2 = Repa.Z :. x :. (y + shift)
                                   in if sh `Repa.inShape` shape
                                        then Just sh
@@ -118,26 +118,26 @@ main = do args <- getArgs
           let csNum   = head . tail . Repa.listOfShape . Repa.extent . csArray $ db
           let csShape =               Repa.listOfShape . Repa.extent . csArray $ db
           putStrLn $ L.concat ["Read ", show csNum, " chemical shifts."]
-          putStrLn $ L.concat ["Read shifts array of shape ", show csShape]
+          putStrLn $ "Read shifts array of shape " ++ show csShape
           Just input <- processInputFile shiftsfname
-          putStrLn . ("Header: " ++) . L.intercalate " " . headers $ input
+          putStrLn . ("Header: " ++) . L.unwords . headers $ input
           let inputNum   = head . tail . Repa.listOfShape . Repa.extent . shifts $ input
           let inputShape =               Repa.listOfShape . Repa.extent . shifts $ input
           putStrLn $ L.concat ["Read ", show inputNum, " rows of input."]
-          putStrLn $ L.concat ["Read input of shape ", show inputShape]
+          putStrLn $ "Read input of shape " ++ show inputShape
           putStrLn $ "Labels: "   ++ show (shiftLabels input)
           putStrLn $ "DB names: " ++ show (shiftNames  db)
           let (si, shiftNameErrs) = shiftIndices (shiftLabels input) (shiftNames db)
           when (shiftNameErrs /= []) . putStrLn . L.intercalate "\n" $ shiftNameErrs
-          seqSim <-(maybe (error "Cannot find file with sequence similarity weights!") SeqSim.seqSim
-                      `fmap` SeqSim.readWeights)
+          seqSim <-maybe (error "Cannot find file with sequence similarity weights!") SeqSim.seqSim
+                      `fmap` SeqSim.readWeights
           putStr "Query indices:"
           print si
           hFlush stdout 
           let compsco = computeScores si input db seqSim
           print . ("Final shape:" ++) . show . Repa.listOfShape . Repa.extent $ compsco
           hFlush stdout 
-          s <- Repa.computeUnboxedP $ compsco
-          print $ (Repa.toList s :: [Float])
+          s <- Repa.computeUnboxedP compsco
+          print (Repa.toList s :: [Float])
 
 
