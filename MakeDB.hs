@@ -128,9 +128,10 @@ coordAdd se coord = se { coords     = coord:coords     se }
 
 -- | Given a filter, projection to key, and adding function
 --   adds an object to a sorting structure, when filter is true.
-addToSMap aFilter finder adder smap entry = if aFilter entry
-                                              then k `seq` smap'
-                                              else smap
+addToSMap aFilter finder adder (!ignoreCount, smap) entry =
+    if aFilter entry
+      then k `seq` (ignoreCount, smap')
+      else (ignoreCount+1, smap)
   where
     k     = finder entry
     se    = Map.findWithDefault (emptySE k) k smap
@@ -162,15 +163,17 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                           printMsg [show (length coords)
                                                    ,"atomic coordinates from"
                                                    ,fname ++ "."]
-                                          let smap = makeSMap chemShifts coords
+                                          let (ignCrd, ignCS, smap) = makeSMap chemShifts coords
                                           let ssmap = sortSMap smap
                                           let result = selistToDb ssmap
+                                          printMsg ["Ignored ", show ignCrd, " coordinates and ", show ignCS, " chemical shift entries."]
                                           showDbErrors (BS.pack fname) result
                                           return result
   where
     printMsg aList = putStrLn $ unwords aList
-    makeSMap chemShifts coords = let smapCoords = Data.List.foldl' addCoordToSMap emptySMap  coords
-                                 in               Data.List.foldl' addCSToSMap    smapCoords chemShifts
+    makeSMap chemShifts coords = let (ignoredCoords, smapCoords) = Data.List.foldl' addCoordToSMap (0, emptySMap ) coords
+                                     (ignoredShifts, smapResult) = Data.List.foldl' addCSToSMap    (0, smapCoords) chemShifts
+                                 in (ignoredCoords, ignoredShifts, smapResult)
 
 -- | Converts a map of sorting entries, to an ordered list of per-residue SortingEntries (with no gaps.)
 sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys resnum
@@ -193,9 +196,12 @@ fillGaps (first:rest) = first:fillGaps' (se_key first) rest
   where
     fillGaps' :: ResId -> [SortingEntry] -> [SortingEntry]
     fillGaps' !_           []          = []
-    fillGaps' !(ResId n _ ei) (next:rest) = if (n+1 == k) && (ei == fi)
-                                              then                next:cont
-                                              else gapSE (n+1) ei:next:cont
+    fillGaps' !(ResId n _ ei) (next:rest) = if ei /= fi
+                                              then chainTerminusSE n ei:next:cont
+                                              else
+                                                if n+1 == k
+                                                  then                next:cont
+                                                  else gapSE (n+1) ei:next:cont
       where
         nextKey@(ResId k _ fi) = se_key next
         cont      = fillGaps' nextKey rest
