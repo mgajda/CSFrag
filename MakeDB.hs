@@ -74,21 +74,26 @@ makeDB fnames = do dbs <- parallel (Prelude.map dbFromFile fnames)
 -- | Key for sorting dictionary
 data ResId = ResId { resnum  :: !Int
                    , rescode :: !String
+                   , entity  :: !Int
                    }
   deriving (Eq, Ord, Show, Read)
 
 -- | Finds ChemShift's key for sorting
-csKey (ChemShift { seq_id  = num
-                 , comp_id = code
+csKey (ChemShift { seq_id       = num
+                 , comp_id      = code
+                 , CS.entity_id = ent
                  }) = ResId { resnum  = num
                             , rescode = code
+                            , entity  = ent
                             }
 
 -- | Finds Coord's key for sorting
-coordKey (Coord { res_id  = num
-                , resname = code
+coordKey (Coord { res_id          = num
+                , resname         = code
+                , Coord.entity_id = ent
                 }) = ResId { resnum  = num
                            , rescode = code
+                           , entity  = ent
                            }
 
 -- | Filters chemical shift records - take all.
@@ -188,38 +193,41 @@ fillGaps (first:rest) = first:fillGaps' (se_key first) rest
   where
     fillGaps' :: ResId -> [SortingEntry] -> [SortingEntry]
     fillGaps' !_           []          = []
-    fillGaps' !(ResId n _) (next:rest) = if n+1 == k
-                                           then             next:cont
-                                           else gapSE (n+1):next:cont
+    fillGaps' !(ResId n _ ei) (next:rest) = if (n+1 == k) && (ei == fi)
+                                              then                next:cont
+                                              else gapSE (n+1) ei:next:cont
       where
-        nextKey@(ResId k _) = se_key next
+        nextKey@(ResId k _ fi) = se_key next
         cont      = fillGaps' nextKey rest
 
 -- | Makes a @SortingEntry@ for a gap in chain with a given residue number.
-gapSE n = SE { se_key     = ResId { resnum  = n
-                                  , rescode = "-"
-                                  }
-             , chemShifts = []
-             , coords     = []
-             }
+gapSE n e = SE { se_key     = ResId { resnum  = n
+                                    , rescode = "-"
+                                    , entity  = e
+                                    }
+               , chemShifts = []
+               , coords     = []
+               }
 
 -- | Makes a @SortingEntry@ for a gap in chain with a given residue number.
-chainTerminusSE n = SE { se_key     = ResId { resnum  = n
-                                            , rescode = "*"
-                                            }
-                       , chemShifts = []
-                       , coords     = []
-                       }
+chainTerminusSE n e = SE { se_key     = ResId { resnum  = n
+                                              , rescode = "*"
+                                              , entity  = e  
+                                              }
+                         , chemShifts = []
+                         , coords     = []
+                         }
 
 -- | This function adds chain terminator.
 --   Perhaps it would be better to use @intercalate@ during reduction.
 --   TODO: Recognize chain breaks within the same file.
 addChainTerminator [] = []
-addChainTerminator (s:ss) = s:addChainTerminator' (keyfun s) ss
+addChainTerminator (s:ss) = s:addChainTerminator' (keyfun s, entfun s) ss
   where
     keyfun = resnum . se_key
-    addChainTerminator' k []     = [chainTerminusSE (k+1)]
-    addChainTerminator' _ (s:ss) = s:addChainTerminator' (keyfun s) ss
+    entfun = entity . se_key
+    addChainTerminator' (k, e) []     = [chainTerminusSE (k+1) e]
+    addChainTerminator' _      (s:ss) = s:addChainTerminator' (keyfun s, entfun s) ss
 
 -- | Takes an ordered, sorted per-residue groups of SortingEntry, and returns FASTA sequence.
 --   NOTE: does not yet handle gaps!
