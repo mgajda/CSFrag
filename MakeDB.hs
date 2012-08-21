@@ -87,7 +87,6 @@ csKey (ChemShift { seq_id       = num
                             , resnum  = num
                             , rescode = code
                             }
-                            
 
 -- | Finds Coord's key for sorting
 coordKey (Coord { res_id          = num
@@ -169,9 +168,7 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                           let keys     = map fst . toAscList . mapKeys sortingKey $ smap
                                           --putStrLn $ "KEYS: " ++ show keys
                                           let testsmap = map snd . toAscList . mapKeys sortingKey $ smap
-                                          let ssmap    = sortSMap smap
-                                          --putStrLn $ "SORTED: " ++ show (map se_key testsmap)
-                                          --putStrLn $ "BROKEN: " ++ show (map se_key ssmap)
+                                          let ssmap = sortSMap smap
                                           let result = selistToDb ssmap
                                           printMsg ["Ignored ", show ignCrd, " coordinates and ", show ignCS, " chemical shift entries."]
                                           showDbErrors (BS.pack fname) result
@@ -210,8 +207,8 @@ fillGaps (first:rest) = first:fillGaps' (se_key first) rest
                                               then chainTerminusSE n ei:next:cont
                                               else
                                                 if n+1 == k
-                                                  then                next:cont
-                                                  else gapSE (n+1) ei:next:cont
+                                              then                next:cont
+                                              else gapSE (n+1) ei:next:cont
       where
         nextKey@(ResId k _ fi) = se_key next
         cont      = fillGaps' nextKey rest

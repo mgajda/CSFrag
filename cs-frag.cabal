@@ -23,3 +23,4 @@ executable  SearchDB
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary ShiftsCSVInput
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text
+--Add: pqueue
