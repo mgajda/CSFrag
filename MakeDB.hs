@@ -45,7 +45,8 @@ shiftsSigmasRow cs = (mkRow shifts, mkRow sigmas)
     sigmas   = L.map snd entries
     shiftEntry (ChemShift { CS.atom_id   = atid
                           , CS.chemshift = value
-                          , CS.sigma     = sigma }) =
+                          , CS.sigma     = sigma
+                          }) =
       case atid `L.elemIndex` usedShiftNames of
         Nothing -> []
         Just n  -> [((n, value), (n, sigma))]
@@ -73,7 +74,7 @@ makeDB fnames = do dbs <- parallel (Prelude.map dbFromFile fnames)
 
 -- | Key for sorting dictionary
 data ResId = ResId { resnum  :: !Int
-                   , rescode :: !String
+                   , rescode :: !String -- just informative, nothing else
                    , entity  :: !Int
                    }
   deriving (Eq, Ord, Show, Read)
@@ -82,18 +83,19 @@ data ResId = ResId { resnum  :: !Int
 csKey (ChemShift { seq_id       = num
                  , comp_id      = code
                  , CS.entity_id = ent
-                 }) = ResId { resnum  = num
+                 }) = ResId { entity  = ent
+                            , resnum  = num
                             , rescode = code
-                            , entity  = ent
                             }
+                            
 
 -- | Finds Coord's key for sorting
 coordKey (Coord { res_id          = num
                 , resname         = code
                 , Coord.entity_id = ent
-                }) = ResId { resnum  = num
+                }) = ResId { entity  = ent
+                           , resnum  = num
                            , rescode = code
-                           , entity  = ent
                            }
 
 -- | Filters chemical shift records - take all.
@@ -147,6 +149,7 @@ addCoordToSMap = addToSMap coordFilter coordKey coordAdd
 showDbErrors :: String -> Database -> IO ()
 showDbErrors fname db = do printDims fname db
                            BS.hPutStr stderr . BS.concat . map (\m -> BS.concat [fname, ":", m, "\n"]) $ checkDb db
+                           putStrLn . show . resArray $ db
 
 -- | Reads a single database
 dbFromFile fname = do putStrLn fname -- TODO: implement reading
@@ -156,7 +159,6 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                           return nullDb
                         Right star  -> do let chemShifts = extractChemShifts star
                                           let coords     = extractCoords     star
-                                          --chemShifts `par` coords `par` ...
                                           printMsg [show (length chemShifts)
                                                    ,"chemical shifts from"
                                                    ,fname ++ "."]
@@ -164,7 +166,12 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                                    ,"atomic coordinates from"
                                                    ,fname ++ "."]
                                           let (ignCrd, ignCS, smap) = makeSMap chemShifts coords
-                                          let ssmap = sortSMap smap
+                                          let keys     = map fst . toAscList . mapKeys sortingKey $ smap
+                                          --putStrLn $ "KEYS: " ++ show keys
+                                          let testsmap = map snd . toAscList . mapKeys sortingKey $ smap
+                                          let ssmap    = sortSMap smap
+                                          --putStrLn $ "SORTED: " ++ show (map se_key testsmap)
+                                          --putStrLn $ "BROKEN: " ++ show (map se_key ssmap)
                                           let result = selistToDb ssmap
                                           printMsg ["Ignored ", show ignCrd, " coordinates and ", show ignCS, " chemical shift entries."]
                                           showDbErrors (BS.pack fname) result
@@ -175,8 +182,11 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                      (ignoredShifts, smapResult) = Data.List.foldl' addCSToSMap    (0, smapCoords) chemShifts
                                  in (ignoredCoords, ignoredShifts, smapResult)
 
+-- | Gives a sorting key for distinguishing residues.
+sortingKey resid = (entity resid, resnum resid)
+
 -- | Converts a map of sorting entries, to an ordered list of per-residue SortingEntries (with no gaps.)
-sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys resnum
+sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys sortingKey
 
 -- | Converts an ordered list of per-residue @SortingEntry@ records to @Database@
 selistToDb selist = nullDb { resArray     = repaFromList1 $ fastaSequence selist
