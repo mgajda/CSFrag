@@ -4,10 +4,13 @@
 *.p_o
 *.prof
 *.db
+.*.swp
 Test
 Test2
 Test3
 MakeDB
+MakeDBMR
+CheckSeq
 SearchDB
 TestOuter
 output.db
