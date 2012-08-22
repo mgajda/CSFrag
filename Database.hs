@@ -28,6 +28,9 @@ import Data.STAR.Coords     as Coord
 import Data.STAR.ChemShifts as CS
 import qualified Data.Vector as V
 
+import Data.Array.Repa.RepaNFData()
+import Control.DeepSeq
+
 -- | Identifies fragment starting at a given position uniquely.
 data DBPosition = DBPos { posFilename :: !String
                         , posEntity   :: !Int
@@ -36,6 +39,7 @@ data DBPosition = DBPos { posFilename :: !String
   deriving (Typeable, Show, Eq, Ord)
 
 $(derive makeBinary ''DBPosition)
+$(derive makeNFData ''DBPosition)
 
 fromListBoxed sh = fromVector sh . V.fromList
 
@@ -52,6 +56,7 @@ data Database = Database { resArray     :: Array U DIM1 Char  -- (nRes + nStruct
   deriving (Typeable, Show, Eq)
 
 $(derive makeBinary ''Database)
+$(derive makeNFData ''Database)
 
 -- | Empty array of rank 1
 emptyArrayDim1  = fromListUnboxed (ix1 0  )               []

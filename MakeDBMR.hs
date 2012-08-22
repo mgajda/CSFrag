@@ -16,18 +16,10 @@ import Remote.Task(liftTaskIO, newPromise, readPromise)
 
 import Database
 import DatabaseCreation
-import Util(withParallel, repaFromList1, repaFromLists2, repaConcat2d, repaConcat1d)
 
 import Control.DeepSeq
 import Data.DeriveTH
 import qualified Data.Array.Repa as Repa
-
-
-$(derive makeNFData ''Database)
-$(derive makeNFData ''DBPosition)
-
-instance (NFData a) =>NFData (Repa.Array Repa.U sh a) where
-  rnf a = a `seq` () -- isn't it a default  implementation?
 
 -- | Print usage on the command line
 usage = do prog <- getProgName
@@ -62,11 +54,12 @@ initialProcess "MASTER" =
                       let inputfiles = butlast args
                       let outputfile = last    args
                       db <-runTask $! mapFold dbFromFileTask__closure mergeResults inputfiles
-                      --[[db]] <-runTask $ mapReduce dbMapReduce inputfiles
                       liftIO $ writeDB outputfile db
 
 initialProcess "WORKER" = receiveWait [] 
-initialProcess _ = say "You need to start this program as either a MASTER or a WORKER. Set the appropiate value of cfgRole on the command line or in the config file."
+initialProcess _        = say ("You need to start this program as either a MASTER or a WORKER." ++
+                               "Set the appropiate value of cfgRole on the command line or in " ++
+                               "the config file.")
 
 main = remoteInit (Just "config") [Main.__remoteCallMetaData] initialProcess
 

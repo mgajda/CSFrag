@@ -9,5 +9,8 @@ import Control.DeepSeq
 instance (NFData a) => NFData (Repa.Array RepaV.V sh a) where
   rnf = rnf . RepaV.toVector
 
-instance (NFData a) => NFData (V.Vector a) where
+instance (NFData a) => NFData (V.Vector a)              where
   rnf v = V.foldr (\a b -> rnf a `seq` b) () v
+
+instance (NFData a) => NFData (Repa.Array Repa.U  sh a) where
+  rnf a = a `seq` () -- isn't it a default  implementation?
