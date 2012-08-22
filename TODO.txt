@@ -4,6 +4,7 @@ Assymetric seqsim comparison for '*' and '-' -> 0 for missing query, verybad for
 
 Example ubiquitin structure in BMRB: merged_15547_2jx5.str.gz.
 
-Write to Jeff Epstein why my program doesn't seem to parallelize?
+Write to Jeff Epstein why my program breaks when I queue more promises than there are worker nodes.
 
-Write to edsko with a polite request for MapReduce layer & tutorial in a new distributed-haskell.
+Write to edsko with a polite request for task layer & tutorial in a new distributed-haskell.
+Now it seems that there is no work-stealing queue, nor load-balancing support.
