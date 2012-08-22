@@ -8,5 +8,5 @@
 #time ./SearchDB small.db K18_alone_shifty.csv
 #time ./MakeDB ubq.str ubq.db
 #time ./SearchDB ubq.db ubq.csv
-#time ./MakeDB ubqs/*.str ubqs.db
+time ./MakeDB ubqs/*.str ubqs.db
 time ./SearchDB ubqs.db ubq.csv

@@ -133,8 +133,10 @@ addCoordToSMap = addToSMap coordFilter coordKey coordAdd
 
 showDbErrors :: String -> Database -> IO ()
 showDbErrors fname db = do printDims fname db
-                           BS.hPutStr stderr . BS.concat . map (\m -> BS.concat [fname, ":", m, "\n"]) $ checkDb db
-                           putStrLn . show . resArray $ db
+                           BS.hPutStr stderr . BS.concat . map (\m -> BS.concat [fname, ":", m, "\n"])
+                             $ checkDb db
+                           BS.hPutStr stderr (fname `BS.append` ": ")
+                           hPutStrLn stderr . Repa.toList . resArray $ db
 
 -- | Reads a single database
 dbFromFile fname = do putStrLn fname -- TODO: implement reading
@@ -155,7 +157,7 @@ dbFromFile fname = do putStrLn fname -- TODO: implement reading
                                           --putStrLn $ "KEYS: " ++ show keys
                                           let testsmap = map snd . toAscList . mapKeys sortingKey $ smap
                                           let ssmap = sortSMap smap
-                                          let result = selistToDb ssmap
+                                          let result = selistToDb ssmap fname
                                           printMsg ["Ignored ", show ignCrd, " coordinates and ", show ignCS, " chemical shift entries."]
                                           showDbErrors (BS.pack fname) result
                                           return result
@@ -172,14 +174,22 @@ sortingKey resid = (entity resid, resnum resid)
 sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys sortingKey
 
 -- | Converts an ordered list of per-residue @SortingEntry@ records to @Database@
-selistToDb selist = nullDb { resArray     = repaFromList1 $ fastaSequence selist
-                           , csArray      = shifts
-                           , csSigmaArray = sigmas
-                           , crdArray     = map coords selist
-                           }
+selistToDb selist fname = nullDb { resArray     = repaFromList1 $ fastaSequence selist
+                                 , csArray      = shifts
+                                 , csSigmaArray = sigmas
+                                 , crdArray     = map coords selist
+                                 , posNames     = map (residToPos fname . se_key) selist
+                                 }
   where
     (shifts, sigmas) = makeShiftsSigmas selist
 
+residToPos fname (ResId { entity  = ent
+                        , resnum  = resi
+                        , rescode = _
+                        }) = DBPos { posFilename = fname
+                                   , posEntity   = ent
+                                   , posResidue  = resi
+                                   }
 
 -- | Fill gaps in an ordered list of SortingEntry records.
 --   The goal is to assure that selected fragments will have no breaks.
@@ -246,6 +256,7 @@ mergeResults dbs = assert allShiftNamesEqual
                             , csSigmaArray = repaConcat2d $ map csSigmaArray dbs
                             , shiftNames   = shiftNames . head             $ dbs -- TODO: add assertion
                             , crdArray     = L.concatMap        crdArray     dbs
+                            , posNames     = L.concatMap        posNames     dbs
                             }
   where
     firstShiftNames = shiftNames . head $ dbs

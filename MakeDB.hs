@@ -11,7 +11,7 @@ import Data.STAR.Type(String(..))
 
 import Util(withParallel, repaFromList1, repaFromLists2, repaConcat2d, repaConcat1d)
 import DatabaseCreation(dbFromFile, mergeResults, showDbErrors)
-import Database(Database(..), encodeCompressedFile)
+import Database(Database(..), writeDB)
 
 -- | Parse .str files and generate arrays in parallel,
 --   then merge results into a single database.
@@ -36,7 +36,7 @@ main = do args <- getArgs
           let dbfname     = last    args
           let inputfnames = butlast args
           db <- withParallel $ makeDB inputfnames
-          encodeCompressedFile dbfname db
+          writeDB dbfname db
   where
     butlast [b]    = []
     butlast []     = []

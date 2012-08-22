@@ -1,10 +1,11 @@
 {-# LANGUAGE DeriveDataTypeable, FlexibleInstances, TemplateHaskell, BangPatterns #-}
 {-# LANGUAGE NoMonomorphismRestriction, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Database( Database(..)
+               , DBPosition(..)
                , nullDb
                , checkDb
-               , encodeCompressedFile
-               , decodeCompressedFile
+               , readDB
+               , writeDB
                , usedShiftsCount
                , usedShiftNames
                ) where
@@ -25,6 +26,15 @@ import Codec.Compression.GZip(compress, decompress)
 import Data.STAR.Coords     as Coord
 import Data.STAR.ChemShifts as CS
 
+-- | Identifies fragment starting at a given position uniquely.
+data DBPosition = DBPos { posFilename :: !String
+                        , posEntity   :: !Int
+                        , posResidue  :: !Int
+                        }
+  deriving (Typeable, Show, Eq, Ord)
+
+$(derive makeBinary ''DBPosition)
+
 -- | Database works as an array of residues in the sequence order, splitted by '*' structure separators,
 --   along with coordinates, and chemical shifts
 data Database = Database { resArray     :: Array U DIM1 Char  -- (nRes + nStruct)
@@ -33,6 +43,7 @@ data Database = Database { resArray     :: Array U DIM1 Char  -- (nRes + nStruct
                          , shiftNames   :: [String]  -- nShifts (max length of chemical shift code)
                          , crdArray     :: [[Coord]] -- (nRes + nStruct) -> pointers to all coordinates
                                                             -- in each residue (first model only.)
+                         , posNames     :: [DBPosition]
                          }
   deriving (Typeable, Show, Eq)
 
@@ -75,13 +86,20 @@ makeShiftsSigmas cs = (shifts, sigmas)
 
 -- | Empty database.
 nullDb :: Database
-nullDb = Database emptyArrayDim1 emptyArrayDim2 emptyArrayDim2 usedShiftNames []
+nullDb = Database emptyArrayDim1 emptyArrayDim2 emptyArrayDim2 usedShiftNames [] []
 
 -- | Decode and decompress database file.
 decodeCompressedFile f = return . decode . decompress =<< BSL.readFile f
 
 -- | Encode and compress database file.
 encodeCompressedFile f = BSL.writeFile f . compress . encode
+
+readDB :: FilePath -> IO Database
+--readDB = decodeFile
+readDB = decodeCompressedFile
+
+writeDB :: FilePath -> Database -> IO ()
+writeDB = encodeCompressedFile
 
 bshow = BS.pack . show
 
@@ -92,6 +110,7 @@ checkDb db = countRes ++ countShifts ++ countCoords ++ countNamesCS ++ countName
   where
     firstLen a  = head .        listOfShape . extent $ a
     secondLen a = head . tail . listOfShape . extent $ a
+    lenPos      = length    . posNames     $ db
     lenRes      = firstLen  . resArray     $ db
     lenCS       = secondLen . csArray      $ db
     lenSigmas   = secondLen . csSigmaArray $ db
@@ -99,11 +118,18 @@ checkDb db = countRes ++ countShifts ++ countCoords ++ countNamesCS ++ countName
     widthSigmas = firstLen  . csSigmaArray $ db
     lenCrd      = length    . crdArray     $ db
     lenNames    = length    . shiftNames   $ db
-    countRes         = (lenRes     >=10)           `check` ["Found only ", bshow lenRes, " residues."] -- minimum expected number of residues
-    countShifts      = (lenRes     == lenCS)       `check` ["Different number of residues ", bshow lenRes, " than shifts ", bshow lenCS, "."]
-    countSigmas      = (lenSigmas  == lenCS)       `check` ["Different number of shift records ", bshow lenCS,
+    countPos    = (lenPos ==lenRes) `check` ["Found different number of positions (", bshow lenPos,
+                                             ") and residues (", bshow lenRes, ".)"]
+    countRes         = (lenRes     >=10)           `check` ["Found only ", bshow lenRes, " residues."]
+      -- minimum expected number of residues
+    countShifts      = (lenRes     == lenCS)       `check` ["Different number of residues ",
+                                                            bshow lenRes, " than shifts ", bshow lenCS,
+                                                            "."]
+    countSigmas      = (lenSigmas  == lenCS)       `check` ["Different number of shift records ",
+                                                            bshow lenCS,
                                                             " than sigma records ", bshow lenSigmas, "."]
-    countNamesCS     = (lenNames   == widthCS)     `check` ["Different number of chemical shift codes ", bshow widthCS,
+    countNamesCS     = (lenNames   == widthCS)     `check` ["Different number of chemical shift codes ",
+                                                            bshow widthCS,
                                                             " than width of chemical shift array ", bshow lenCS, "."]
     countNamesSigmas = (lenNames   == widthSigmas) `check` ["Different number of chemical shift codes ", bshow widthCS,
                                                             " than width of chemical shift array ", bshow lenCS, "."]

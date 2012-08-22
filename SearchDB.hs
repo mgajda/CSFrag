@@ -114,7 +114,7 @@ main = do args <- getArgs
           when (L.length args /=2) $ do printUsage
                                         exitFailure
           let [dbfname, shiftsfname] = args
-          (db :: Database) <- decodeCompressedFile dbfname
+          db <- readDB dbfname
           let csNum   = head . tail . Repa.listOfShape . Repa.extent . csArray $ db
           let csShape =               Repa.listOfShape . Repa.extent . csArray $ db
           putStrLn $ L.concat ["Read ", show csNum, " chemical shifts."]
