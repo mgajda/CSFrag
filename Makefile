@@ -1,4 +1,4 @@
-EXECUTABLES=MakeDB SearchDB TestOuter
+EXECUTABLES=MakeDB SearchDB TestOuter MakeDBMR CheckSeq
 
 all: ${EXECUTABLES} test
 
