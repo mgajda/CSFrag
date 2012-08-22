@@ -24,6 +24,10 @@ MakeDB: MakeDB.hs Util.hs Database.hs DatabaseCreation.hs
 #	ghc --make -rtsopts -with-rtsopts=-H2G\ -A2M -threaded MakeDB
 
 MakeDBMR: MakeDBMR.hs Util.hs Database.hs DatabaseCreation.hs
+	ghc --make -rtsopts -with-rtsopts=-H64M\ -A2M -threaded MakeDBMR
 
 TestOuter: Outer.hs TestOuter.hs
 	ghc --make -rtsopts -with-rtsopts=-H64M\ -A2M -threaded TestOuter
+
+CHTest: MakeDBMR
+	bash -c "(cd slave/; for i in `seq 4`; do ../MakeDBMR & done); sleep 1; (cd master/; time ../MakeDBMR ~/Projects/CSFrag/ubqs/merged*.str* out.db)"
