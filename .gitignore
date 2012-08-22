@@ -3,6 +3,7 @@
 *.p_hi
 *.p_o
 *.prof
+*.db
 Test
 Test2
 Test3
