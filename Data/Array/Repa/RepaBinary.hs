@@ -8,6 +8,7 @@ import Data.Vector.Unboxed.Base(Unbox(..))
 import qualified Data.Vector as V
 import Data.Binary
 import Data.Array.Repa.Shape(listOfShape, shapeOfList)
+import Control.DeepSeq
 
 {-
 type StorableArray sh a = (Repa.Shape sh
@@ -36,3 +37,4 @@ instance (Repa.Shape sh, Binary sh, Binary a)
   get     = do sh  <- get
                l   <- get
                return $ RepaV.fromVector sh $ V.fromList l
+
