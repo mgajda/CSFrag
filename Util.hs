@@ -2,9 +2,11 @@
 module Util(withParallel
            ,setupParallel
            ,stopParallel
-           ,repaFromList1
-           ,repaFromLists2
-           ,repaConcat1d
+           ,repaFromList1U
+           ,repaFromList1B
+           ,repaFromLists2U
+           ,repaConcat1dU
+           ,repaConcat1dB
            ,repaConcat2d)
 where
 
@@ -15,6 +17,8 @@ import Control.Concurrent.ParallelIO(stopGlobalPool)
 import qualified Data.Array.Repa     as Repa
 import qualified Data.List           as L
 import qualified Data.Vector.Unboxed as V
+import qualified Data.Vector         as Vec
+import qualified Data.Array.Repa.Repr.Vector as RepaV
 import Control.Exception(assert)
 import Control.Monad(when)
 import GHC.Environment(getFullArgs) -- to check RTS params
@@ -44,18 +48,24 @@ withParallel act = do setupParallel
                       stopParallel
                       return r
 
-repaFromList1  l = Repa.fromListUnboxed (Repa.ix1 . length $ l) l
+repaFromList1U  l = Repa.fromListUnboxed (Repa.ix1 . length $ l)                l
+repaFromList1B  l = RepaV.fromVector     (Repa.ix1 . length $ l) . Vec.fromList $ l
 
-repaFromLists2 l = assert allLike $ Repa.fromListUnboxed (Repa.ix2 len2 len1) $ concat l
+repaFromLists2U l = assert allLike $ Repa.fromListUnboxed (Repa.ix2 len2 len1) $ concat l
   where
     len2 = length . head $ l -- inner dimension
     len1 = length l          -- outer dimension
     allLike   = all ((==len2) . length) l
 
-repaConcat1d :: (V.Unbox e) => [Repa.Array Repa.U Repa.DIM1 e] -> Repa.Array Repa.U Repa.DIM1 e
-repaConcat1d arrays = Repa.fromUnboxed (Repa.ix1 size) . V.concat . L.map Repa.toUnboxed $ arrays
+repaConcat1dU :: (V.Unbox e) => [Repa.Array Repa.U Repa.DIM1 e] -> Repa.Array Repa.U Repa.DIM1 e
+repaConcat1dU arrays = Repa.fromUnboxed (Repa.ix1 size) . V.concat . L.map Repa.toUnboxed $ arrays
   where
     size= sum $ L.map (head . Repa.listOfShape . Repa.extent) arrays
+
+repaConcat1dB :: [Repa.Array RepaV.V Repa.DIM1 e] -> Repa.Array RepaV.V Repa.DIM1 e
+repaConcat1dB arrays = RepaV.fromVector (Repa.ix1 size) . Vec.concat . L.map RepaV.toVector $ arrays
+  where
+    size = sum $ L.map (head . Repa.listOfShape . Repa.extent) arrays
 
 repaConcat2d :: (V.Unbox e) => [Repa.Array Repa.U Repa.DIM2 e] -> Repa.Array Repa.U Repa.DIM2 e
 repaConcat2d arrays = assert fstDimOk $ Repa.fromUnboxed (Repa.ix2 sndDim fstDim) vector

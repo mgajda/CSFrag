@@ -9,7 +9,7 @@ import System.Exit
 import Control.Monad(when)
 import Data.STAR.Type(String(..))
 
-import Util(withParallel, repaFromList1, repaFromLists2, repaConcat2d, repaConcat1d)
+import Util(withParallel)
 import DatabaseCreation(dbFromFile, mergeResults, showDbErrors)
 import Database(Database(..), writeDB)
 

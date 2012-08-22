@@ -8,6 +8,7 @@ module Database( Database(..)
                , writeDB
                , usedShiftsCount
                , usedShiftNames
+               , fromListBoxed
                ) where
 
 import Data.Binary
@@ -25,6 +26,7 @@ import Codec.Compression.GZip(compress, decompress)
 
 import Data.STAR.Coords     as Coord
 import Data.STAR.ChemShifts as CS
+import qualified Data.Vector as V
 
 -- | Identifies fragment starting at a given position uniquely.
 data DBPosition = DBPos { posFilename :: !String
@@ -35,25 +37,29 @@ data DBPosition = DBPos { posFilename :: !String
 
 $(derive makeBinary ''DBPosition)
 
+fromListBoxed sh = fromVector sh . V.fromList
+
 -- | Database works as an array of residues in the sequence order, splitted by '*' structure separators,
 --   along with coordinates, and chemical shifts
 data Database = Database { resArray     :: Array U DIM1 Char  -- (nRes + nStruct)
                          , csArray      :: Array U DIM2 Float -- (nRes + nStruct) x nShifts
                          , csSigmaArray :: Array U DIM2 Float -- (nRes + nStruct) x nShifts
                          , shiftNames   :: [String]  -- nShifts (max length of chemical shift code)
-                         , crdArray     :: [[Coord]] -- (nRes + nStruct) -> pointers to all coordinates
+                         , crdArray     :: Array V DIM1 [Coord] -- (nRes + nStruct) -> pointers to all coordinates
                                                             -- in each residue (first model only.)
-                         , posNames     :: [DBPosition]
+                         , posNames     :: Array V DIM1 DBPosition
                          }
   deriving (Typeable, Show, Eq)
 
 $(derive makeBinary ''Database)
 
 -- | Empty array of rank 1
-emptyArrayDim1 = fromListUnboxed (ix1 0  ) []
+emptyArrayDim1  = fromListUnboxed (ix1 0  )               []
 
 -- | Empty array of rank 2
-emptyArrayDim2 = fromListUnboxed (ix2 0 usedShiftsCount) []
+emptyArrayDim2  = fromListUnboxed (ix2 0 usedShiftsCount) []
+
+emptyArrayDim1V = fromVector      (ix1 0  ) $ V.fromList  []
 
 usedShiftNames = ["CA", "CB", "CO", "HA", "N", "H"]
 -- NOTE: "H" are also sometimes called "HN"
@@ -86,7 +92,8 @@ makeShiftsSigmas cs = (shifts, sigmas)
 
 -- | Empty database.
 nullDb :: Database
-nullDb = Database emptyArrayDim1 emptyArrayDim2 emptyArrayDim2 usedShiftNames [] []
+nullDb = Database emptyArrayDim1 emptyArrayDim2 emptyArrayDim2 usedShiftNames
+                  emptyArrayDim1V emptyArrayDim1V
 
 -- | Decode and decompress database file.
 decodeCompressedFile f = return . decode . decompress =<< BSL.readFile f
@@ -110,13 +117,13 @@ checkDb db = countRes ++ countShifts ++ countCoords ++ countNamesCS ++ countName
   where
     firstLen a  = head .        listOfShape . extent $ a
     secondLen a = head . tail . listOfShape . extent $ a
-    lenPos      = length    . posNames     $ db
+    lenPos      = firstLen  . posNames     $ db
     lenRes      = firstLen  . resArray     $ db
     lenCS       = secondLen . csArray      $ db
     lenSigmas   = secondLen . csSigmaArray $ db
     widthCS     = firstLen  . csArray      $ db
     widthSigmas = firstLen  . csSigmaArray $ db
-    lenCrd      = length    . crdArray     $ db
+    lenCrd      = firstLen  . crdArray     $ db
     lenNames    = length    . shiftNames   $ db
     countPos    = (lenPos ==lenRes) `check` ["Found different number of positions (", bshow lenPos,
                                              ") and residues (", bshow lenRes, ".)"]

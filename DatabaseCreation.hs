@@ -24,7 +24,10 @@ import Data.STAR.Type(String(..))
 
 import Database
 import ResidueCodes
-import Util(withParallel, repaFromList1, repaFromLists2, repaConcat2d, repaConcat1d)
+import Util(withParallel,
+            repaFromList1U, repaFromList1B,
+            repaFromLists2U, repaConcat2d,
+            repaConcat1dU, repaConcat1dB)
 
 import qualified Data.List as L
 import qualified Data.Vector.Unboxed  as V
@@ -174,11 +177,11 @@ sortingKey resid = (entity resid, resnum resid)
 sortSMap = addChainTerminator . fillGaps . map snd . toAscList . mapKeys sortingKey
 
 -- | Converts an ordered list of per-residue @SortingEntry@ records to @Database@
-selistToDb selist fname = nullDb { resArray     = repaFromList1 $ fastaSequence selist
+selistToDb selist fname = nullDb { resArray     = repaFromList1U $ fastaSequence selist
                                  , csArray      = shifts
                                  , csSigmaArray = sigmas
-                                 , crdArray     = map coords selist
-                                 , posNames     = map (residToPos fname . se_key) selist
+                                 , crdArray     = repaFromList1B $ map coords                      selist
+                                 , posNames     = repaFromList1B $ map (residToPos fname . se_key) selist
                                  }
   where
     (shifts, sigmas) = makeShiftsSigmas selist
@@ -251,12 +254,12 @@ toSingleLetterCode' aa    = toSingleLetterCode aa
 -- | Merge multiple databases into one.
 mergeResults ::  [Database] -> Database
 mergeResults dbs = assert allShiftNamesEqual
-                   Database { resArray     = repaConcat1d $ map resArray     dbs
-                            , csArray      = repaConcat2d $ map csArray      dbs
-                            , csSigmaArray = repaConcat2d $ map csSigmaArray dbs
-                            , shiftNames   = shiftNames . head             $ dbs -- TODO: add assertion
-                            , crdArray     = L.concatMap        crdArray     dbs
-                            , posNames     = L.concatMap        posNames     dbs
+                   Database { resArray     = repaConcat1dU $ map resArray     dbs
+                            , csArray      = repaConcat2d  $ map csArray      dbs
+                            , csSigmaArray = repaConcat2d  $ map csSigmaArray dbs
+                            , shiftNames   = shiftNames    . head           $ dbs
+                            , crdArray     = repaConcat1dB $ map crdArray     dbs
+                            , posNames     = repaConcat1dB $ map posNames     dbs
                             }
   where
     firstShiftNames = shiftNames . head $ dbs
