@@ -13,14 +13,21 @@ cabal-version:       >=1.12
 executable  MakeDB
   default-language:    Haskell2010
   main-is:             MakeDB.hs
-  other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary
+  other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary Data.Array.Repa.RepaNFData
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
-  build-depends:       base, binary, derive, parsestar, repa, parallel-io, filepath, vector, containers, bytestring, array, zlib
+  build-depends:       base, binary, derive, parsestar, repa, parallel-io, filepath, vector, containers, bytestring, array, zlib, deepseq
 
 executable  SearchDB
   default-language:    Haskell2010
   main-is:             SearchDB.hs
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary ShiftsCSVInput
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
-  build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text
+  build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq
 --Add: pqueue
+
+executable  MakeDBMR
+  default-language:    Haskell2010
+  main-is:             MakeDBMR.hs
+  other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary Data.Array.Repa.RepaNFData
+  ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
+  build-depends:       base, binary, derive, parsestar, repa, parallel-io, filepath, vector, containers, bytestring, array, zlib, deepseq, remote, transformers
