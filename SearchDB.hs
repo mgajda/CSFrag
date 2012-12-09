@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TypeOperators, NoMonomorphismRestriction #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TypeOperators, NoMonomorphismRestriction, FlexibleContexts #-}
 module Main where
 
 import System.Environment(getArgs, getProgName)
@@ -11,13 +11,16 @@ import Control.Exception(assert)
 import Debug.Trace(trace)
 
 import qualified Data.Array.Repa as Repa
-import Data.Array.Repa((:.)(..), Z)
+import Data.Array.Repa((:.)(..), Z(..))
 import Data.Array.Repa.Eval()
+
+import Data.Array.Repa.IO.Matrix(writeMatrixToTextFile)
 
 import Database
 import ShiftsCSVInput
 import qualified SeqSim
 import Outer
+import Util
 
 -- ^ Finding fragments in the database.
 
@@ -45,14 +48,39 @@ showShape name = (\s -> name ++ ": " ++ s) . show . Repa.listOfShape . Repa.exte
 
 traceShapeOfSnd name (a, b) = trace (showShape name b) (a, b)
 
+-- | Compute a score without using Repa compound operations
+computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Float) -> [[Float]]
+computeScores si query db seqsim = [[answer (Z:. dbi :. qi)
+                                     |  qi  <- [0..len1d (resseq   query) - 1]]
+                                      | dbi <- [0..len1d (resArray db   ) - 1]]
+  where
+    answer (Z :. dbi :. qi ) = answerSeq dbi qi
+    answerSeq dbi qi = ((resArray db    Repa.! (Repa.ix1 dbi)) `seqsim`
+                        (resseq   query Repa.! (Repa.ix1 qi ))         )
+    len1d arr = let Z :. i = Repa.extent arr
+                in i
+
+computeScores'' :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Float) -> Repa.Array Repa.D Repa.DIM2 Float
+computeScores'' si query db seqsim = Repa.fromFunction (Z :. len1d (resArray db) :. len1d (resseq query))
+                                   answer
+  where
+    answer (Z :. dbi :. qi ) = answerSeq dbi qi
+    answerSeq dbi qi = ((resArray db    Repa.! (Repa.ix1 dbi)) `seqsim`
+                        (resseq   query Repa.! (Repa.ix1 qi ))         )
+    len1d arr = let Z :. i = Repa.extent arr
+                in i
+
 -- | Fill in index array from assoclist si, and then use it to transfer indices.
-computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Float) -> Repa.Array Repa.D Repa.DIM2 Float
-computeScores si query db seqsim = shiftIndex (-1) 0.0 (residueScores (-1)) Repa.+^
-                                   residueScores                        0   Repa.+^
-                                   shiftIndex   1  0.0 (residueScores   1 )
+computeScores' :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Float) -> Repa.Array Repa.D Repa.DIM2 Float
+computeScores' si query db seqsim = residueScores 0
+                                   --shiftIndex (-1) 0.0 (residueScores (-1)) Repa.+^
+                                   --residueScores                        0   Repa.+^
+                                   --shiftIndex   1  0.0 (residueScores   1 )
   where
     shiftComparison (name, i, j) = traceShapeOfSnd "shiftComparison" (name, outer1 absDiff (shiftsInd db i) (queryInd query j ))
-    comparisons                  = seqComparison seqsim db query : map shiftComparison si
+    --comparisons                 = [seqComparison seqsim db query] -- : map shiftComparison si
+    --comparisons                 = seqComparison seqsim db query : map shiftComparison si
+    comparisons                  = map shiftComparison si
     weightComparison relIndex (name, arr) = case shiftWeights relIndex name of
                                               Just weight -> Repa.map (*weight) arr
                                               Nothing     -> error $ "Cannot find index: " ++ show name
@@ -75,10 +103,10 @@ shiftIndex shift defaultValue arr = Repa.backpermuteDft defaultsArray indexMappi
                                        then Just sh
                                        else Nothing
 
-seqComparison :: (Char -> Char -> Float)-> Database-> ShiftsInput-> (String, Repa.Array Repa.D ((Z :. Int) :. Int) Float)
+seqComparison :: (Char -> Char -> Float)-> Database-> ShiftsInput-> (String, Repa.Array Repa.D Repa.DIM2 Float)
 seqComparison seqsim db query = traceShapeOfSnd "seqComparison" ("seqsim", outer1 seqsim (resArray db) (resseq query))
 
-shiftsInd :: Database-> Int -> Repa.Array Repa.D (Repa.SliceShape (Z :. Int ) :. Int) Float
+shiftsInd :: Database-> Int -> Repa.Array Repa.D (Repa.SliceShape Repa.DIM1 :. Int) Float
 shiftsInd db    i = traceShape "shiftsInd" $ Repa.slice (csArray db   ) (Repa.Z :. Repa.All :. i)
 
 queryInd :: ShiftsInput-> Int -> Repa.Array Repa.D (Repa.SliceShape (Z :. Int) :. Int) Float
@@ -109,6 +137,20 @@ printUsage = do prog <- getProgName
                 , "\nProgram for searching with Preditor algorithm."
                 ]
 
+showsMatrix :: Repa.Source r Float => Repa.Array r Repa.DIM2 Float -> ShowS
+showsMatrix m = joinWith '\n' . map makeLine . repaToLists2 $ m
+  where
+    joinWith :: Char -> [ShowS] -> ShowS
+    joinWith c = foldr1 (\a b -> a . (c:) . b)
+    makeLine :: [Float] -> ShowS = joinWith ' ' . map (showsPrec 1)
+
+showsMatrix' :: [[Float]] -> ShowS
+showsMatrix' m = joinWith '\n' . map makeLine $ m
+  where
+    joinWith :: Char -> [ShowS] -> ShowS
+    joinWith c = foldr1 (\a b -> a . (c:) . b)
+    makeLine :: [Float] -> ShowS = joinWith ' ' . map (showsPrec 1)
+
 -- | Reads database, and query, then it shows query results (as fragment indices.)
 main = do args <- getArgs
           when (L.length args /=2) $ do printUsage
@@ -135,9 +177,17 @@ main = do args <- getArgs
           print si
           hFlush stdout 
           let compsco = computeScores si input db seqSim
-          print . ("Final shape:" ++) . show . Repa.listOfShape . Repa.extent $ compsco
+          --print . ("Final shape:" ++) . show . Repa.listOfShape . Repa.extent $ compsco
           hFlush stdout 
-          s <- Repa.computeUnboxedP compsco
-          print (Repa.toList s :: [Float])
+          print compsco
+          --s <- Repa.computeUnboxedP compsco
+          --logS <- Repa.computeUnboxedP $ Repa.map (logBase 2) compsco
+          --print $ L.sort (Repa.toList s :: [Float])
+          --print $ (Repa.toList s :: [Float])
+          -- TODO: 1. Print as 2 dim array (so that boundaries are clear)
+          -- TODO: 2. Show as 2D heat map in GNUPlot?
+          -- TODO: 3. Show indices of best scores.
+          writeFile "matrix.out" $ showsMatrix' compsco ""
+          --writeFile "matrix.out" $ showsMatrix s ""
 
 

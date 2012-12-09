@@ -12,7 +12,7 @@ import Data.STAR.Type(String(..))
 import Control.Monad.IO.Class(liftIO)
 
 import Remote -- CloudHaskell
-import Remote.Task(liftTaskIO, newPromise, readPromise)
+import Remote.Task(liftTaskIO, newPromise, readPromise, newPromiseAt, Locality(..))
 
 import Database
 import DatabaseCreation
@@ -42,9 +42,11 @@ $( remotable [ 'dbFromFileTask, 'mergeResults ] )
 
 -- Here is a hand-made modification of mapReduce to do map in parallel, but fold on MASTER
 mapFold mapper reducer inputs = -- TODO: check if chunkify packages anything?
-        do pmapResult <- mapM (newPromise . mapper) inputs
+        do pmapResult <- mapM (newPromiseAt workerNodes . mapper) inputs
            mapResult  <- mapM readPromise pmapResult
            return $ reducer mapResult
+  where
+    workerNodes = LcByRole ["WORKER"] -- all, including MASTER
 
 -- | Get arguments, and run makeDB on them, and write
 --   resulting database into a single file.
@@ -57,9 +59,7 @@ initialProcess "MASTER" =
                       liftIO $ writeDB outputfile db
 
 initialProcess "WORKER" = receiveWait [] 
-initialProcess _        = say ("You need to start this program as either a MASTER or a WORKER." ++
-                               "Set the appropiate value of cfgRole on the command line or in " ++
-                               "the config file.")
+initialProcess _ = say "You need to start this program as either a MASTER or a WORKER. Set the appropiate value of cfgRole on the command line or in the config file."
 
 main = remoteInit (Just "config") [Main.__remoteCallMetaData] initialProcess
 

@@ -5,6 +5,7 @@ module Util(withParallel
            ,repaFromList1U
            ,repaFromList1B
            ,repaFromLists2U
+           ,repaToLists2
            ,repaConcat1dU
            ,repaConcat1dB
            ,repaConcat2d)
@@ -56,6 +57,15 @@ repaFromLists2U l = assert allLike $ Repa.fromListUnboxed (Repa.ix2 len2 len1) $
     len2 = length . head $ l -- inner dimension
     len1 = length l          -- outer dimension
     allLike   = all ((==len2) . length) l
+
+repaToLists2
+  :: Repa.Source r t => RepaV.Array r Repa.DIM2 t -> [[t]]
+repaToLists2 m  = [[m Repa.! (Repa.ix2 i j)
+                      | i <- [1..x]]
+                     | j <- [1..y]]
+  where
+    [x, y] = Repa.listOfShape $ Repa.extent m
+    l      = Repa.toList m
 
 repaConcat1dU :: (V.Unbox e) => [Repa.Array Repa.U Repa.DIM1 e] -> Repa.Array Repa.U Repa.DIM1 e
 repaConcat1dU arrays = Repa.fromUnboxed (Repa.ix1 size) . V.concat . L.map Repa.toUnboxed $ arrays

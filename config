@@ -28,7 +28,7 @@ cfgRole NODE
 # default assignment of host name, which forms
 # port of all node IDs and process IDs originating
 # on this node.
-### cfgHostName somehostname
+cfgHostName localhost
 
 # If nonzero, will force the node to listen for
 # new incoming connections on a specific port.
@@ -67,7 +67,8 @@ cfgLocalRegistryListenPort 38813
 # the DNS name or IP address of a computer accessible
 # over the network interface where a node registry
 # may be running. Hostnames are separate by spaces.
-### cfgKnownHosts somehostname anotherhostname thirdhostname
+cfgKnownHosts localhost
+#somehostname anotherhostname thirdhostname
 
 # The maximum delay, in microseconds, to tolerate
 # delays from service services. In an extremely congested
@@ -92,7 +93,8 @@ cfgMaxOutgoing 50
 # may slow down your program. If 0, promises
 # are never flush to disk.
 # Default: 5000000
-cfgPromiseFlushDelay 5000000
+cfgPromiseFlushDelay 0
+#5000000
 
 # Relates to the task layer only. The prefix
 # of the files to be written when they
