@@ -61,10 +61,11 @@ repaFromLists2U l = assert allLike $ Repa.fromListUnboxed (Repa.ix2 len2 len1) $
 repaToLists2
   :: Repa.Source r t => RepaV.Array r Repa.DIM2 t -> [[t]]
 repaToLists2 m  = [[m Repa.! (Repa.ix2 i j)
-                      | i <- [1..x]]
-                     | j <- [1..y]]
+                      | j <- [0..y-1]]
+                     | i <- [0..x-1]]
   where
-    [x, y] = Repa.listOfShape $ Repa.extent m
+    [y, x] = Repa.listOfShape $ Repa.extent m
+    --Repa.Z Repa.:. y Repa.:. x = Repa.listOfShape $ Repa.extent m
     l      = Repa.toList m
 
 repaConcat1dU :: (V.Unbox e) => [Repa.Array Repa.U Repa.DIM1 e] -> Repa.Array Repa.U Repa.DIM1 e
