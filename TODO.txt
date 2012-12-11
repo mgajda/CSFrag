@@ -8,3 +8,5 @@ Write to Jeff Epstein why my program breaks when I queue more promises than ther
 
 Write to edsko with a polite request for task layer & tutorial in a new distributed-haskell.
 Now it seems that there is no work-stealing queue, nor load-balancing support.
+
+Use other CSV library with BSD license.
