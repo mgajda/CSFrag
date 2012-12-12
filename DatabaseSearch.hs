@@ -49,6 +49,7 @@ showShape name = (\s -> name ++ ": " ++ s) . show . Repa.listOfShape . Repa.exte
 traceShapeOfSnd name (a, b) = trace (showShape name b) (a, b)
 
 -- | Compute a score without using Repa compound operations
+{-
 computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Float) -> [[Float]]
 computeScores si query db seqsim = [[answer (Z:. dbi :. qi)
                                      |  qi  <- [0..len1d (resseq   query) - 1]]
@@ -69,18 +70,18 @@ computeScores'' si query db seqsim = Repa.fromFunction (Z :. len1d (resArray db)
                         (resseq   query Repa.! (Repa.ix1 qi ))         )
     len1d arr = let Z :. i = Repa.extent arr
                 in i
-
+-}
 -- | Fill in index array from assoclist si, and then use it to transfer indices.
-computeScores' :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Float) -> Repa.Array Repa.D Repa.DIM2 Float
-computeScores' si query db seqsim = residueScores 0
+computeScores :: [(String, Int, Int)] -> ShiftsInput -> Database -> (Char -> Char -> Float) -> Repa.Array Repa.D Repa.DIM2 Float
+computeScores si query db seqsim = residueScores 0
                                    --shiftIndex (-1) 0.0 (residueScores (-1)) Repa.+^
                                    --residueScores                        0   Repa.+^
                                    --shiftIndex   1  0.0 (residueScores   1 )
   where
     shiftComparison (name, i, j) = traceShapeOfSnd "shiftComparison" (name, outer1 absDiff (shiftsInd db i) (queryInd query j ))
     --comparisons                 = [seqComparison seqsim db query] -- : map shiftComparison si
-    --comparisons                 = seqComparison seqsim db query : map shiftComparison si
-    comparisons                  = map shiftComparison si
+    comparisons                 = seqComparison seqsim db query : map shiftComparison si
+    --comparisons                  = map shiftComparison si
     weightComparison relIndex (name, arr) = case shiftWeights relIndex name of
                                               Just weight -> Repa.map (*weight) arr
                                               Nothing     -> error $ "Cannot find index: " ++ show name

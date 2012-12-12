@@ -64,15 +64,15 @@ main = do args <- getArgs
           let compsco = computeScores si input db seqSim
           --print . ("Final shape:" ++) . show . Repa.listOfShape . Repa.extent $ compsco
           hFlush stdout 
-          print compsco
-          --s <- Repa.computeUnboxedP compsco
+          --print compsco
+          s <- Repa.computeUnboxedP compsco
           --logS <- Repa.computeUnboxedP $ Repa.map (logBase 2) compsco
           --print $ L.sort (Repa.toList s :: [Float])
           --print $ (Repa.toList s :: [Float])
           -- TODO: 1. Print as 2 dim array (so that boundaries are clear)
           -- TODO: 2. Show as 2D heat map in GNUPlot?
           -- TODO: 3. Show indices of best scores.
-          writeFile "matrix.out" $ showsMatrix' compsco ""
+          writeFile "matrix.out" $ showsMatrix' (repaToLists2 compsco) ""
           --writeFile "matrix.out" $ showsMatrix s ""
 
 
