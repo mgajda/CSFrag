@@ -4,6 +4,7 @@ module Main where
 import Data.Array.Repa           as Repa
 import Data.Array.Repa.Arbitrary as Repa
 import qualified Data.Array.Repa.Repr.Vector as RepaV
+import Data.Vector.Unboxed.Base(Unbox(..))
 import Test.QuickCheck
 import Test.QuickCheck.Property
 import Test.QuickCheck.All
@@ -13,7 +14,7 @@ import Outer
 forAllArb :: (Show a, Arbitrary a, Testable prop) => (a -> prop) -> Property
 forAllArb = forAll arbitrary
 
-checkFromFunction2 :: (Eq a, Num a, Show a, Data.Vector.Unboxed.Base.Unbox a,Arbitrary a) =>a -> Property
+checkFromFunction2 :: (Eq a, Num a, Show a, Unbox a, Arbitrary a) =>a -> Property
 checkFromFunction2 phantom = (forAllArb
                                  (\(arr1 :: Array U DIM1 a) -> forAllArb
                                      (\(arr2 :: Array U DIM1 a) -> test arr1 arr2))){- &&

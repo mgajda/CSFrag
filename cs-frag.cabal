@@ -69,22 +69,11 @@ Test-Suite TestOuter
   main-is:             TestOuter.hs
   other-modules:       Outer
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
-  build-depends:       base, binary, derive, parsestar, repa < 3.2.2, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq, QuickCheck < 2.5.0.0
+  build-depends:       base, binary, derive, parsestar, repa < 3.2.2, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq, QuickCheck < 2.5.0.0,
+                       parallel-io
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10
   else
     build-depends: vector >= 0.10.0.0
 
-Test-Suite Bug
-  type:       exitcode-stdio-1.0
-  default-language:    Haskell2010
-  main-is:             Bug.hs
-  other-modules:       Outer
-  ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
-  build-depends:       base, binary, derive, parsestar, repa < 3.2.2, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq, QuickCheck < 2.5.0.0, parallel-io
-  if flag(old-vector)
-    cpp-options: -DDEFINE_NFDATA_VECTOR
-    build-depends: vector < 0.10
-  else
-    build-depends: vector >= 0.10.0.0
