@@ -76,7 +76,7 @@ getDefaultWeightsFilename = return $ "." </> "share" </> "seqsim.txt"
 readWeights ::  IO (Maybe SeqSimWeights)
 readWeights = getDefaultWeightsFilename >>= readWeightsFromFile
 
-prepareSeqSim ::  IO (Char -> Char -> Float)
+prepareSeqSim ::  IO (Char -> Char -> Double)
 prepareSeqSim = maybe errMsg SeqSim.seqSim
                   `fmap` SeqSim.readWeights
   where
@@ -96,7 +96,7 @@ readWeightsFromFile fname = do txt <- TextIO.readFile fname
                                                                                m
 
 -- | Compute sequence match score for a given pair of characters
-seqSim ::  SeqSimWeights -> Char -> Char -> Float
+seqSim ::  SeqSimWeights -> Char -> Char -> Double
 seqSim _ _ b | (b == '*') || (b =='-') = error $ "Found " ++ show b ++ "in query sequence!"
 seqSim _ a _ | (a == '*') || (a =='-') = negInf
 seqSim (SeqSimWeights codes indices matrix) a b = fromIntegral $ matrix Repa.! (Z Repa.:. findInd a Repa.:. findInd b)
@@ -108,5 +108,5 @@ seqSim (SeqSimWeights codes indices matrix) a b = fromIntegral $ matrix Repa.! (
     ai = findInd a
     bi = findInd b
 
-negInf = -99 :: Float
+negInf = -99 :: Double
 --negInf = read "-Infinity" :: Float

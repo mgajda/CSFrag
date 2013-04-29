@@ -1,5 +1,5 @@
 name:                CSFrag
-version:             0.1
+version:             0.2
 synopsis:            Chemical shift-based fragment finding.
 description:         Creates CS-indexed database, and uses Preditor criterion to find best fragments. 
 category:            Data
@@ -13,14 +13,15 @@ cabal-version:       >=1.12
 flag old-vector
   description: Use old vector library before version 0.10 (introduced along with GHC 7.6).
                Disable for GHC 7.6.1 and latest 7.4.2.
-  default: True
+  default: False
 
 executable  MakeDB
   default-language:    Haskell2010
   main-is:             MakeDB.hs
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary Data.Array.Repa.RepaNFData
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
-  build-depends:       base, binary, derive, parsestar, repa < 3.2.2, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq, parallel-io
+  build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
+                       attoparsec-csv, attoparsec, text, deepseq, parallel-io
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10.0.0
@@ -32,7 +33,8 @@ executable  SearchDB
   main-is:             SearchDB.hs
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary ShiftsCSVInput DatabaseSearch
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
-  build-depends:       base, binary, derive, parsestar, repa < 3.2.2, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq, QuickCheck < 2.5.0.0, parallel-io
+  build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
+                       attoparsec-csv, attoparsec, text, deepseq, QuickCheck, parallel-io
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10
@@ -43,7 +45,8 @@ executable  MakeDBMR
   default-language:    Haskell2010
   main-is:             MakeDBMR.hs
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary Data.Array.Repa.RepaNFData
-  build-depends:       base, binary, derive, parsestar, repa < 3.2.2, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq, QuickCheck < 2.5.0.0, parallel-io, remote, transformers
+  build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
+                       attoparsec-csv, attoparsec, text, deepseq, QuickCheck, parallel-io, remote, transformers
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
@@ -56,7 +59,8 @@ executable  CheckSeq
   main-is:             CheckSeq.hs
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary ShiftsCSVInput
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
-  build-depends:       base, binary, derive, parsestar, repa < 3.2.2, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq, QuickCheck < 2.5.0.0
+  build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
+                       attoparsec-csv, attoparsec, text, deepseq, QuickCheck
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10
@@ -69,8 +73,8 @@ Test-Suite TestOuter
   main-is:             TestOuter.hs
   other-modules:       Outer
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
-  build-depends:       base, binary, derive, parsestar, repa < 3.2.2, filepath, vector, containers, bytestring, array, zlib, attoparsec-csv, attoparsec, text, deepseq, QuickCheck < 2.5.0.0,
-                       parallel-io
+  build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
+                       attoparsec-csv, attoparsec, text, deepseq, QuickCheck, parallel-io
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10

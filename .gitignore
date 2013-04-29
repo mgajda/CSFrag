@@ -16,3 +16,9 @@ TestOuter
 output.db
 dist/
 slave/rpromise-*
+ubq_CA.csv
+ubq_CB.csv
+ubq_CO.csv
+ubq_HA.csv
+ubq_HN.csv
+ubq_N.csv
