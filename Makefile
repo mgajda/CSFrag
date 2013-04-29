@@ -5,9 +5,13 @@ all: ${EXECUTABLES} test
 clean:
 	find . '(' -iname '*.o' -or -iname '*.hi' -or -iname '*.p_o' -or -iname '*.p_hi' ')' -exec rm -f '{}' ';'
 	rm -f ${EXECUTABLES} Test Test2 Test3 
+	rm -f tags
 
 test: MakeDB SearchDB
 	bash testit.sh
+
+tags:
+	hothasktags *.hs Data/Array/Repa/*.hs > tags
 
 test.prof: SearchDB.prof
 	./SearchDB output.db K18_alone_shifty.csv +RTS -xc
@@ -31,3 +35,5 @@ TestOuter: Outer.hs TestOuter.hs
 
 CHTest: MakeDBMR
 	bash -c "(cd slave/; for i in `seq 4`; do ../MakeDBMR & done); sleep 1; (cd master/; time ../MakeDBMR ~/Projects/CSFrag/ubqs/merged*.str* out.db)"
+
+.PHONY: tags

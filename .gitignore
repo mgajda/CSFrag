@@ -5,6 +5,7 @@
 *.prof
 *.db
 .*.swp
+tags
 Test
 Test2
 Test3
