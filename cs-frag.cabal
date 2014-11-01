@@ -21,7 +21,7 @@ executable  MakeDB
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary Data.Array.Repa.RepaNFData
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
-                       attoparsec-csv, attoparsec, text, deepseq, parallel-io
+                       csv-conduit, attoparsec, text, deepseq, parallel-io >= 0.3.2.2
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10.0.0
@@ -34,7 +34,7 @@ executable  SearchDB
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary ShiftsCSVInput DatabaseSearch
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
-                       attoparsec-csv, attoparsec, text, deepseq, QuickCheck, parallel-io
+                       csv-conduit, attoparsec, text, deepseq, QuickCheck, parallel-io >= 0.3.2.2
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10
@@ -46,7 +46,7 @@ executable  MakeDBMR
   main-is:             MakeDBMR.hs
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary Data.Array.Repa.RepaNFData
   build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
-                       attoparsec-csv, attoparsec, text, deepseq, QuickCheck, parallel-io, remote, transformers
+                       csv-conduit, attoparsec, text, deepseq, QuickCheck, parallel-io >= 0.3.2.2, remote, transformers
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
@@ -60,7 +60,7 @@ executable  CheckSeq
   other-modules:       Database ResidueCodes Util Data.Array.Repa.RepaBinary ShiftsCSVInput
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
-                       attoparsec-csv, attoparsec, text, deepseq, QuickCheck
+                       csv-conduit, attoparsec, text, deepseq, QuickCheck
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10
@@ -74,7 +74,7 @@ Test-Suite TestOuter
   other-modules:       Outer
   ghc-options:         -threaded -with-rtsopts=-H3G -rtsopts
   build-depends:       base, binary, derive, parsestar, repa, filepath, vector, containers, bytestring, array, zlib,
-                       attoparsec-csv, attoparsec, text, deepseq, QuickCheck, parallel-io
+                       csv-conduit, attoparsec, text, deepseq, QuickCheck, parallel-io >= 0.3.2.2
   if flag(old-vector)
     cpp-options: -DDEFINE_NFDATA_VECTOR
     build-depends: vector < 0.10

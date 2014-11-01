@@ -23,7 +23,7 @@ import Data.STAR.ChemShifts as CS
 import Data.STAR.Type(String(..))
 
 import Database
-import ResidueCodes
+import Data.STAR.ResidueCodes
 import Util(withParallel,
             repaFromList1U, repaFromList1B,
             repaFromLists2U, repaConcat2d,

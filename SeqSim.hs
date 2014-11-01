@@ -9,7 +9,8 @@ where
 
 import System.FilePath
 import Control.Monad(forM_)
-import Text.ParseCSV(parseCSV)
+import Data.CSV.Conduit.Types(CSVSettings(..))
+import Data.CSV.Conduit.Parser.Text(parseCSV)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.List             as L
 import qualified Data.Text            as T
@@ -82,9 +83,11 @@ prepareSeqSim = maybe errMsg SeqSim.seqSim
   where
     errMsg = error "Cannot find file with sequence similarity weights!"
 
+stdCSV = CSVSettings ',' $ Just '\"'
+
 readWeightsFromFile ::  FilePath -> IO (Maybe SeqSimWeights)
 readWeightsFromFile fname = do txt <- TextIO.readFile fname 
-                               let Right result = parseCSV txt
+                               let Right result = parseCSV stdCSV txt
                                let headers = map T.strip $ head result
                                let arrP = redParse . map convEntry . tail $ result
                                case arrP of

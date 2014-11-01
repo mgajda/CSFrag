@@ -11,7 +11,8 @@ import Database
 main = do fnames <- getArgs
           when (null fnames) $ do
             putStrLn "Usage: CheckSeq <input.str> ..."
-            putStrLn "Shows FASTA sequence read from NMR-STAR file."
+            putStrLn "Shows FASTA sequence read from CSFrag database file."
+            --putStrLn "Shows FASTA sequence read from NMR-STAR file."
           forM fnames $ \fname ->
             do putStr $ fname ++ ": "
                db <- readDB fname

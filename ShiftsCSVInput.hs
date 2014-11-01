@@ -8,7 +8,8 @@ import System.Environment(getArgs)
 import qualified System.IO(stderr, hPutStrLn)
 import Control.Monad(forM_)
 import GHC.Float(double2Float)
-import Text.ParseCSV(parseCSV)
+import Data.CSV.Conduit.Types(CSVSettings(..))
+import Data.CSV.Conduit.Parser.Text(parseCSV)
 import Data.Text(Text, strip, unpack)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as TextIO
@@ -72,7 +73,7 @@ mkMatrix headers list = assert dimensions (nums, T.concat aSeq, arr)
     arr            = Repa.fromListUnboxed (Repa.ix2 headerLen $ length ary) . concat $ ary
 
 processInputFile fname = do txt <- TextIO.readFile fname 
-                            case parseCSV txt of
+                            case parseCSV (CSVSettings ',' $ Just '\"') txt of
                               Left msg -> do printErr msg
                                              return Nothing
                               Right result -> do let header = map strip $ head result
