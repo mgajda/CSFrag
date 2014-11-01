@@ -1,5 +1,7 @@
 *.hi
 *.o
+*.dyn_hi
+*.dyn_o
 *.p_hi
 *.p_o
 *.prof
